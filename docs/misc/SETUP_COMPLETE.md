@@ -16,8 +16,8 @@ rapid-photo-upload/
 ├── mobile/               Placeholder for React Native (Phase 6)
 ├── docker-compose.yml    PostgreSQL container
 ├── README.md             Project overview
-├── QUICK_START.md        Setup and testing guide
-├── IMPLEMENTATION_TASK_GUIDE.md  Detailed Phase 1-3 tasks
+├── docs/QUICK_START.md   Setup and testing guide
+├── docs/IMPLEMENTATION_TASK_GUIDE.md  Detailed Phase 1-3 tasks
 └── env.example           Environment variables template
 ```
 
