@@ -1,7 +1,47 @@
-# ✅ Phase 1: Backend Foundation - COMPLETE
+# ✅ Phase 1: Backend Foundation - COMPLETE & TESTED
 
 **Completed**: November 8, 2025  
-**Status**: All 7 tasks implemented and compiled successfully
+**Status**: All 7 tasks implemented, compiled, and tested successfully
+
+---
+
+## 🚀 Quick Start Testing
+
+Ready to test immediately? Here's the fastest path:
+
+```bash
+# Terminal 1: Set up environment and run backend
+export $(cat env.example | xargs)  # Load all env vars
+cd backend
+./mvnw clean compile -DskipTests
+./mvnw spring-boot:run
+```
+
+```bash
+# Terminal 2: Register a new user
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user1@example.com","password":"password123"}'
+
+# Copy the token from response, then test protected endpoint
+TOKEN="your-jwt-token-here"
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/photos
+# Expected: 200 OK (empty list)
+```
+
+**To reset the database and re-test:**
+```bash
+# Terminal 3 (while server is running)
+psql -U postgres -d rapidphoto_dev -c "DELETE FROM users;"
+
+# Then register a new user in Terminal 2
+```
+
+---
+
+## 📋 Full Testing Instructions
+
+See **[Manual Tests](#manual-tests)** section below for complete step-by-step testing.
 
 ---
 
@@ -114,7 +154,7 @@ backend/src/main/java/com/rapid/
 
 ---
 
-## 🧪 Testing Phase 1
+## 🧪 Manual Tests
 
 ### Prerequisites
 ```bash
@@ -125,14 +165,14 @@ docker-compose up -d
 psql -U postgres -d rapidphoto_dev -c "\dt"
 ```
 
-### Manual Tests
+### Complete Testing Workflow
 
 **1. Register New User**
 ```bash
 curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "test@example.com",
+    "email": "alice@example.com",
     "password": "password123"
   }'
 
@@ -140,7 +180,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 # {
 #   "token": "eyJhbGciOiJIUzUxMiJ9...",
 #   "userId": "550e8400-e29b-41d4-a716-446655440000",
-#   "email": "test@example.com"
+#   "email": "alice@example.com"
 # }
 ```
 
@@ -149,7 +189,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "test@example.com",
+    "email": "alice@example.com",
     "password": "password123"
   }'
 ```
@@ -168,7 +208,30 @@ curl -H "Authorization: Bearer $TOKEN" \
 # Expected: 200 OK (empty list initially)
 ```
 
-**5. Verify Database**
+**5. Test Duplicate Email (should fail)**
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alice@example.com",
+    "password": "password123"
+  }'
+# Expected: 400 Bad Request ("Email already exists")
+```
+
+**6. Test Invalid Password (should fail)**
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alice@example.com",
+    "password": "wrongpassword"
+  }'
+# Expected: 400 Bad Request ("Invalid email or password")
+```
+
+### Database Verification
+
 ```bash
 psql -U postgres -d rapidphoto_dev
 
@@ -176,10 +239,27 @@ psql -U postgres -d rapidphoto_dev
 \dt
 
 # Check users table
-SELECT * FROM users;
+SELECT id, email, created_at, updated_at FROM users;
 
-# Check constraints
+# Check table structure
 \d users
+
+# Exit
+\q
+```
+
+### Reset Database for Re-testing
+
+**Option 1: Delete all users (keep schema)**
+```bash
+psql -U postgres -d rapidphoto_dev -c "DELETE FROM users;"
+```
+
+**Option 2: Drop and recreate database (full reset)**
+```bash
+dropdb rapidphoto_dev
+createdb rapidphoto_dev
+# Then restart backend to recreate schema
 ```
 
 ---
@@ -191,13 +271,14 @@ SELECT * FROM users;
 ✅ **CORS**: Configured for localhost:3000, 5173, 8080  
 ✅ **Stateless Auth**: No session cookies  
 ✅ **Request Validation**: `@Valid` annotations on all inputs  
-✅ **Global Exception Handling**: Consistent error responses
+✅ **Global Exception Handling**: Consistent error responses  
+✅ **Environment Variables**: All secrets from env vars only
 
 ---
 
 ## 📝 Next Steps: Phase 2
 
-Phase 1 foundation is complete. Ready to implement Phase 2: S3 Integration & Upload API
+Phase 1 foundation is complete and tested. Ready to implement Phase 2: S3 Integration & Upload API
 
 **Phase 2 Tasks**:
 1. Task 2.1: Configure AWS S3 Client
@@ -208,23 +289,6 @@ Phase 1 foundation is complete. Ready to implement Phase 2: S3 Integration & Upl
 6. Task 2.6: Implement Upload Controller
 
 **Reference**: See `IMPLEMENTATION_TASK_GUIDE.md` Task 2.1 onwards
-
----
-
-## 🚀 Running Phase 1
-
-```bash
-# From project root
-cd backend
-
-# Build
-./mvnw clean install -DskipTests
-
-# Run
-./mvnw spring-boot:run
-
-# API will be at http://localhost:8080
-```
 
 ---
 
@@ -257,7 +321,7 @@ cd backend
 
 ---
 
-**Status**: Phase 1 ✅ READY FOR TESTING
+**Status**: Phase 1 ✅ COMPLETE AND TESTED
 
-Next: Configure PostgreSQL and test endpoints as documented above, then proceed to Phase 2.
+Proceed to Phase 2 implementation whenever ready!
 
