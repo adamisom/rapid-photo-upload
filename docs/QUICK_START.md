@@ -182,6 +182,27 @@ export AWS_SECRET_ACCESS_KEY="your-secret"
 
 ### Setup Instructions
 
+**Option A: Using .env file (Recommended for development)**
+
+1. Copy the template:
+   ```bash
+   cp env.example .env
+   ```
+
+2. Edit `.env` with your actual values (especially `JWT_SECRET`)
+
+3. Load environment variables in your terminal:
+   ```bash
+   export $(cat .env | xargs)
+   ```
+
+4. Verify it worked:
+   ```bash
+   echo $JWT_SECRET
+   ```
+
+**Option B: Export in shell profile (Permanent)**
+
 1. **Add to your shell profile** (~/.zshrc, ~/.bash_profile, etc.):
    ```bash
    export JWT_SECRET=$'your-minimum-64-character-jwt-secret-key-for-hs512-algorithm'
@@ -196,6 +217,8 @@ export AWS_SECRET_ACCESS_KEY="your-secret"
    ```bash
    echo $JWT_SECRET
    ```
+
+**Note**: `.env` file is gitignored—never commit it to git!
 
 ### Design: Single Environment, Secrets from Env Vars
 
