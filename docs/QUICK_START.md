@@ -154,31 +154,37 @@ Detailed phase-by-phase tasks are in `IMPLEMENTATION_TASK_GUIDE.md`.
 The `JWT_SECRET` environment variable **must be set** before running the backend. It requires a minimum 64 characters (512 bits) for HS512 algorithm security.
 
 ```bash
-export JWT_SECRET="your-minimum-64-character-jwt-secret-key-for-hs512-algorithm-development-do-not-commit"
+export JWT_SECRET=$'your-minimum-64-character-jwt-secret-key-for-hs512-algorithm'
 ```
 
 ### Optional: Other Environment Variables
 
-For development, these have sensible defaults in `application-dev.properties`:
+For local development, sensible defaults are provided in `application.properties`:
+- Database: `localhost:5432`, user `postgres`, password `postgres`
+- AWS S3: Empty (not needed until Phase 2)
+
+To override any default:
 
 ```bash
-# Database (defaults to localhost:5432, postgres/postgres)
-export DATABASE_URL="postgresql://localhost:5432/rapidphoto_dev"
-export DATABASE_USERNAME="postgres"
-export DATABASE_PASSWORD="postgres"
+# Database
+export DB_HOST="localhost"
+export DB_PORT="5432"
+export DB_NAME="rapidphoto_dev"
+export DB_USERNAME="postgres"
+export DB_PASSWORD="postgres"
 
 # AWS S3 (required for Phase 2 onwards)
-export AWS_ACCESS_KEY_ID="your-access-key"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
 export AWS_REGION="us-east-1"
 export AWS_S3_BUCKET="rapidphoto-dev"
+export AWS_ACCESS_KEY_ID="your-key"
+export AWS_SECRET_ACCESS_KEY="your-secret"
 ```
 
 ### Setup Instructions
 
 1. **Add to your shell profile** (~/.zshrc, ~/.bash_profile, etc.):
    ```bash
-   export JWT_SECRET="your-minimum-64-character-jwt-secret-key-for-hs512-algorithm-development-do-not-commit"
+   export JWT_SECRET=$'your-minimum-64-character-jwt-secret-key-for-hs512-algorithm'
    ```
 
 2. **Reload shell**:
@@ -191,21 +197,22 @@ export AWS_S3_BUCKET="rapidphoto-dev"
    echo $JWT_SECRET
    ```
 
-### Why No Defaults?
+### Design: Single Environment, Secrets from Env Vars
 
-- `application-dev.properties` is **gitignored** for security (never commit secrets)
-- JWT_SECRET is required to fail fast if not set
-- This follows the **12-factor app** principle and AWS/enterprise best practices
+- `application.properties` - single config file, all environments (committed to git)
+- All sensitive values come from environment variables (`${VAR_NAME}`)
+- Secrets are **never** in the properties file
+- Works identically for development, staging, production
+- `.env` files gitignored for local development
 
 ### Spring Boot Property Resolution
 
 Spring Boot reads properties in this order (later overrides earlier):
 1. `application.properties` (base config, committed to git)
-2. `application-dev.properties` (dev profile, gitignored, contains optional defaults)
-3. Environment variables (e.g., `JWT_SECRET=xxx`)
-4. Command line (`-Djwt.secret=xxx`)
+2. Environment variables (e.g., `JWT_SECRET=xxx`, `DB_PASSWORD=xxx`)
+3. Command line (e.g., `-DJWT_SECRET=xxx`)
 
-**In development**: Set `JWT_SECRET` env var; database defaults work fine.
+All required secrets must come from environment variables.
 
 ---
 

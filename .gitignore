@@ -24,8 +24,6 @@ node_modules/
 .env
 .env.local
 .env.*.local
-application-dev.properties
-application-prod.properties
 
 # Maven
 .mvn/wrapper/
