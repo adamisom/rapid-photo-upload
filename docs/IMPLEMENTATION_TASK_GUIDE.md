@@ -1429,4 +1429,33 @@ public class PhotoController {
 - All endpoints should validate input with `@Valid` annotations
 - Return proper HTTP status codes (201 for creation, 204 for delete, etc.)
 
+---
+
+## Architecture Documentation
+
+### When to Create an Architecture Guide
+
+**Timing**: After Phase 3 testing is complete and all endpoints are verified working.
+
+**Best Time**: Before starting Phase 4 (Web Frontend), so frontend developers have a clear reference.
+
+**Contents Should Cover**:
+- System architecture diagram (backend, S3, database)
+- Data flow for upload workflow (presigned URLs, S3, database)
+- API endpoint reference (all 7 endpoints)
+- Security model (JWT, per-user isolation)
+- Database schema and relationships
+- S3 key naming scheme and file organization
+- Configuration and environment variables
+- Deployment considerations
+
+**Reference**: See `PHASE_2_3_COMPLETE.md` for detailed implementation specifics to include.
+
+### Follow-Up Task
+- **Task 3.5: Create Architecture Documentation** (Phase 4 prep)
+  - Create `docs/ARCHITECTURE.md`
+  - Document system design, data flows, security model
+  - Include diagrams (ASCII or external tool)
+  - Provide quick reference for future developers
+
 

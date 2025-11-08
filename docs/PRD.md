@@ -616,6 +616,22 @@ VITE_API_URL=http://localhost:8080
 
 ---
 
+## Architecture Documentation
+
+After Phase 3 backend implementation is complete and tested, an **Architecture Guide** should be created before starting Phase 4 (Web Frontend). This guide should document:
+
+- **System Design**: Backend, S3, database architecture diagram
+- **Upload Flow**: Detailed presigned URL workflow (initiate → S3 → complete)
+- **API Reference**: All 7 endpoints with request/response examples
+- **Security Model**: JWT, per-user data isolation, authentication flow
+- **Database Schema**: Tables, relationships, indexes
+- **Configuration**: Environment variables, S3 key naming scheme
+- **Deployment**: Production considerations, scaling notes
+
+This becomes the single reference document for frontend/mobile developers integrating with the API.
+
+---
+
 ## Final Notes
 
 This implementation prioritizes **speed of development** while maintaining architectural principles. The presigned URL approach significantly simplifies backend complexity and leverages AWS infrastructure for heavy lifting. HTTP polling provides "real-time enough" updates without WebSocket complexity.
@@ -623,5 +639,7 @@ This implementation prioritizes **speed of development** while maintaining archi
 **Key to Success**: Nail the web application first (Phases 1-5), ensure it works flawlessly with 50+ photos, then clone the logic to mobile. The mobile app is essentially the same business logic with different UI components.
 
 **Working with AI Agent Developer**: Provide clear, isolated tasks (e.g., "implement JWT filter", "create Photo entity") rather than large multi-file tasks. Review all security and concurrency-related code manually.
+
+**Documentation Note**: Create architecture guide before Phase 4 so frontend developers have a complete reference.
 
 Good luck! 🚀
