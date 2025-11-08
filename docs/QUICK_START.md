@@ -149,35 +149,63 @@ Detailed phase-by-phase tasks are in `IMPLEMENTATION_TASK_GUIDE.md`.
 
 ## Environment Variables Setup
 
-### For Development
+### ⚠️ Required: JWT Secret
 
-Create a `.env` file in the project root (or set in your shell):
+The `JWT_SECRET` environment variable **must be set** before running the backend. It requires a minimum 64 characters (512 bits) for HS512 algorithm security.
 
 ```bash
-# Database (default: localhost:5432)
-DATABASE_URL=postgresql://localhost:5432/rapidphoto_dev
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=postgres
-
-# JWT Secret (must be 256-bit minimum)
-JWT_SECRET=your-super-secret-key-minimum-32-characters-long
-
-# AWS S3 (required for Phase 2)
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=us-east-1
-AWS_S3_BUCKET=rapidphoto-dev
+export JWT_SECRET="your-minimum-64-character-jwt-secret-key-for-hs512-algorithm-development-do-not-commit"
 ```
+
+### Optional: Other Environment Variables
+
+For development, these have sensible defaults in `application-dev.properties`:
+
+```bash
+# Database (defaults to localhost:5432, postgres/postgres)
+export DATABASE_URL="postgresql://localhost:5432/rapidphoto_dev"
+export DATABASE_USERNAME="postgres"
+export DATABASE_PASSWORD="postgres"
+
+# AWS S3 (required for Phase 2 onwards)
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="us-east-1"
+export AWS_S3_BUCKET="rapidphoto-dev"
+```
+
+### Setup Instructions
+
+1. **Add to your shell profile** (~/.zshrc, ~/.bash_profile, etc.):
+   ```bash
+   export JWT_SECRET="your-minimum-64-character-jwt-secret-key-for-hs512-algorithm-development-do-not-commit"
+   ```
+
+2. **Reload shell**:
+   ```bash
+   source ~/.zshrc  # or ~/.bash_profile
+   ```
+
+3. **Verify it's set**:
+   ```bash
+   echo $JWT_SECRET
+   ```
+
+### Why No Defaults?
+
+- `application-dev.properties` is **gitignored** for security (never commit secrets)
+- JWT_SECRET is required to fail fast if not set
+- This follows the **12-factor app** principle and AWS/enterprise best practices
 
 ### Spring Boot Property Resolution
 
 Spring Boot reads properties in this order (later overrides earlier):
-1. `application.properties`
-2. `application-dev.properties` (when `spring.profiles.active=dev`)
+1. `application.properties` (base config, committed to git)
+2. `application-dev.properties` (dev profile, gitignored, contains optional defaults)
 3. Environment variables (e.g., `JWT_SECRET=xxx`)
 4. Command line (`-Djwt.secret=xxx`)
 
-**Recommendation**: Set AWS credentials as environment variables, leave database as defaults for development.
+**In development**: Set `JWT_SECRET` env var; database defaults work fine.
 
 ---
 

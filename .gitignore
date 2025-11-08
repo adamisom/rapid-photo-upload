@@ -1,0 +1,41 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build
+target/
+build/
+dist/
+*.class
+*.jar
+*.war
+*.ear
+
+# Dependencies
+node_modules/
+.m2/
+.gradle/
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+application-dev.properties
+application-prod.properties
+
+# Maven
+.mvn/wrapper/
+mvnw.cmd
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
