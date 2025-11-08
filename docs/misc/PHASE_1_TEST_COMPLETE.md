@@ -167,22 +167,21 @@ psql -U postgres -d rapidphoto_dev -c "\dt"
 
 ### Complete Testing Workflow
 
-**1. Register New User**
+**1. Register New User and automatically extract/save the token**
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+export TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "alice@example.com",
     "password": "password123"
-  }'
+  }' | jq -r '.token')
 
-# Expected response:
-# {
-#   "token": "eyJhbGciOiJIUzUxMiJ9...",
-#   "userId": "550e8400-e29b-41d4-a716-446655440000",
-#   "email": "alice@example.com"
-# }
+# Verify token was saved:
+echo $TOKEN
 ```
+
+This one-liner extracts the token using `jq` and exports it automatically.
+If you don't have `jq` installed: `brew install jq`
 
 **2. Login with Credentials**
 ```bash
@@ -192,6 +191,7 @@ curl -X POST http://localhost:8080/api/auth/login \
     "email": "alice@example.com",
     "password": "password123"
   }'
+# Also returns a token - you can save it the same way: export TOKEN="..."
 ```
 
 **3. Test Protected Endpoint (without token → 401)**
@@ -202,10 +202,15 @@ curl http://localhost:8080/api/photos
 
 **4. Test Protected Endpoint (with token → 200)**
 ```bash
-TOKEN="your-jwt-token-from-register"
+# Uses the TOKEN you saved in step 1
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/api/photos
 # Expected: 200 OK (empty list initially)
+
+# Pro tip: If you need a fresh token, just:
+# - Repeat step 1 with a new email
+# - Copy the token and export TOKEN="..."
+# - Then re-run this command
 ```
 
 **5. Test Duplicate Email (should fail)**
@@ -250,15 +255,17 @@ SELECT id, email, created_at, updated_at FROM users;
 
 ### Reset Database for Re-testing
 
-**Option 1: Delete all users (keep schema)**
+**Option 1: Delete all users (keep schema) - via Docker**
+
+Current setup is that PostgreSQL is running in a container, thus we must do this from `docker`:
 ```bash
-psql -U postgres -d rapidphoto_dev -c "DELETE FROM users;"
+docker exec rapidphoto-postgres psql -U postgres -d rapidphoto_dev -c "DELETE FROM users;"
 ```
 
 **Option 2: Drop and recreate database (full reset)**
 ```bash
-dropdb rapidphoto_dev
-createdb rapidphoto_dev
+docker exec rapidphoto-postgres dropdb -U postgres rapidphoto_dev
+docker exec rapidphoto-postgres createdb -U postgres rapidphoto_dev
 # Then restart backend to recreate schema
 ```
 
@@ -295,6 +302,16 @@ cd backend
 
 # API will be at http://localhost:8080
 ```
+
+### ⚡ Fast Development Iteration Loop
+
+After code changes, use this one-liner (from `backend/` directory):
+
+```bash
+./mvnw clean compile -DskipTests && ./mvnw spring-boot:run
+```
+
+This rebuilds and restarts the server immediately—perfect for rapid testing.
 
 ---
 
