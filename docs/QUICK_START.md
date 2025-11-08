@@ -50,11 +50,18 @@
      }
    ]
    ```
-3. Get AWS credentials (Access Key ID + Secret Access Key from IAM)
-4. Set environment variables:
+3. Export AWS credentials from local config:
    ```bash
-   export AWS_ACCESS_KEY_ID=your-key
-   export AWS_SECRET_ACCESS_KEY=your-secret
+   # If you've run 'aws configure' before, credentials are in ~/.aws/credentials
+   export AWS_ACCESS_KEY_ID=$(grep 'aws_access_key_id' ~/.aws/credentials | awk '{print $NF}')
+   export AWS_SECRET_ACCESS_KEY=$(grep 'aws_secret_access_key' ~/.aws/credentials | awk '{print $NF}')
+   
+   # Verify they're set (should not be empty)
+   echo $AWS_ACCESS_KEY_ID
+   echo $AWS_SECRET_ACCESS_KEY
+   ```
+4. Set remaining variables:
+   ```bash
    export AWS_REGION=us-east-1
    export AWS_S3_BUCKET=rapidphotoupload-adamisom
    ```
