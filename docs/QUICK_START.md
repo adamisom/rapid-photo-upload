@@ -2,14 +2,27 @@
 
 ## Project Status
 
-✅ **Phase 1 Setup**: Complete
-- Spring Boot 3.4.0 backend initialized
-- Maven project configured with dependencies
-- PostgreSQL configured
-- Application properties set up for development
-- Git repository initialized
+✅ **Phase 1: Backend Foundation** - Complete
+- Spring Boot 3.4.0 backend with JWT authentication
+- Domain entities (User, Photo, UploadBatch) with JPA
+- Repositories and exception handling
+- Auth endpoints: `/api/auth/register`, `/api/auth/login`
 
-🚀 **Next**: Phase 1 Implementation (Backend Foundation)
+✅ **Phase 2: S3 Integration & Upload API** - Complete
+- AWS S3 presigned URLs for client-side uploads
+- Upload workflow: initiate → upload to S3 → complete
+- Batch tracking with status polling
+- Endpoints: `/api/upload/initiate`, `//complete`, `/status`
+
+✅ **Phase 3: Photo Query API** - Complete
+- Photo listing with pagination
+- Presigned download URLs
+- Photo deletion with S3 cleanup
+- Endpoints: `GET/DELETE /api/photos`
+
+**Build Status**: ✅ 34 source files, 71MB JAR, 0 compilation errors
+
+🚀 **Next**: Run tests using TESTING_GUIDE.md
 
 ---
 
@@ -21,14 +34,29 @@
 - PostgreSQL 13+ running locally or Docker
 - Git
 
-**AWS Setup** (before starting backend):
-1. Create AWS S3 bucket: `rapidphoto-adamisom`
-2. Get AWS credentials (Access Key ID + Secret Access Key)
-3. Set environment variables:
+**AWS Setup** (required for Phase 2+):
+1. Create AWS S3 bucket: `rapidphoto-adamisom` (or your bucket name)
+2. Enable CORS on bucket:
+   - Go to AWS Console → S3 → Your Bucket → Permissions → CORS
+   - Add configuration:
+   ```json
+   [
+     {
+       "AllowedHeaders": ["*"],
+       "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
+       "AllowedOrigins": ["http://localhost:5173", "http://localhost:3000"],
+       "ExposeHeaders": ["ETag"],
+       "MaxAgeSeconds": 3000
+     }
+   ]
+   ```
+3. Get AWS credentials (Access Key ID + Secret Access Key from IAM)
+4. Set environment variables:
    ```bash
    export AWS_ACCESS_KEY_ID=your-key
    export AWS_SECRET_ACCESS_KEY=your-secret
    export AWS_REGION=us-east-1
+   export AWS_S3_BUCKET=rapidphoto-adamisom
    ```
 
 ---
@@ -130,20 +158,19 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ## Implementation Guide
 
-Detailed phase-by-phase tasks are in `IMPLEMENTATION_TASK_GUIDE.md`.
+Detailed specifications are in `IMPLEMENTATION_TASK_GUIDE.md`.
 
-### Phase 1: Backend Foundation (Current)
+### Phase Status
 
-**Tasks** (in order):
-1. ✅ Project Initialization (DONE)
-2. ⏳ Configure Database & Properties (DONE - except credentials)
-3. ⏳ Create Domain Model (Entities)
-4. ⏳ Create JPA Repositories
-5. ⏳ Implement JWT Authentication
-6. ⏳ Implement Auth API Endpoints
-7. ⏳ Add Global Exception Handling
+| Phase | Status | Details |
+|-------|--------|---------|
+| 1: Backend Foundation | ✅ Complete | Auth, domain entities, repositories, exception handling |
+| 2: S3 Integration | ✅ Complete | Presigned URLs, upload workflow, batch tracking |
+| 3: Photo Query API | ✅ Complete | Listing, pagination, downloads, deletion |
+| 4: Web Frontend | ⏳ Pending | React SPA |
+| 5: Mobile App | ⏳ Pending | React Native |
 
-**Completion**: When you can register, login, and call protected endpoints.
+**To test Phase 2 & 3**: Follow TESTING_GUIDE.md after backend is running.
 
 ---
 
@@ -258,8 +285,8 @@ All required secrets must come from environment variables.
 - Solution: `./mvnw clean install` and refresh IDE
 
 ### S3 access errors (Phase 2+)
-- Wrong AWS credentials or bucket doesn't exist
-- Solution: Verify AWS credentials and S3 bucket in `rapidphoto-adamisom` region
+- Wrong AWS credentials, bucket doesn't exist, or CORS not enabled
+- Solution: Verify AWS credentials, S3 bucket exists, and CORS is configured (see Prerequisites)
 
 ---
 
@@ -365,12 +392,19 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ---
 
-## Resources
+## Documentation Reference
 
-- **PRD**: `RapidPhotoUpload_Implementation_PRD.md`
-- **Tasks**: `IMPLEMENTATION_TASK_GUIDE.md`
-- **Spring Boot Docs**: https://spring.io/projects/spring-boot
-- **JWT with Spring Security**: https://www.baeldung.com/spring-security-authentication-and-registration
+### Key Documents
+- **TESTING_GUIDE.md** ← Start here to test all endpoints
+- **PHASE_2_3_COMPLETE.md** - Implementation details (classes, methods, endpoints)
+- **PHASE_2_3_SESSION_SUMMARY.md** - Session work summary
+- **IMPLEMENTATION_TASK_GUIDE.md** - Original specifications (Phases 1-3)
+- **PRD.md** - Product requirements
+
+### External Resources
+- **Spring Boot**: https://spring.io/projects/spring-boot
+- **JWT + Spring Security**: https://www.baeldung.com/spring-security-authentication-and-registration
+- **AWS S3 SDK**: https://docs.aws.amazon.com/sdk-for-java/
 
 ---
 
@@ -393,6 +427,6 @@ lsof -i :8080 | grep LISTEN | awk '{print $2}' | xargs kill -9
 
 ---
 
-**Status**: Ready to implement Phase 1 backend foundation.  
-**Questions?** Refer to IMPLEMENTATION_TASK_GUIDE.md for step-by-step instructions.
+**Status**: Phases 1-3 complete. Backend API ready for testing.  
+**Next Step**: Follow TESTING_GUIDE.md to verify all functionality works.
 
