@@ -22,7 +22,7 @@
 - Git
 
 **AWS Setup** (before starting backend):
-1. Create AWS S3 bucket: `rapidphoto-dev`
+1. Create AWS S3 bucket: `rapidphoto-adamisom`
 2. Get AWS credentials (Access Key ID + Secret Access Key)
 3. Set environment variables:
    ```bash
@@ -175,7 +175,7 @@ export DB_PASSWORD="postgres"
 
 # AWS S3 (required for Phase 2 onwards)
 export AWS_REGION="us-east-1"
-export AWS_S3_BUCKET="rapidphoto-dev"
+export AWS_S3_BUCKET="rapidphoto-adamisom"
 export AWS_ACCESS_KEY_ID="your-key"
 export AWS_SECRET_ACCESS_KEY="your-secret"
 ```
@@ -259,7 +259,7 @@ All required secrets must come from environment variables.
 
 ### S3 access errors (Phase 2+)
 - Wrong AWS credentials or bucket doesn't exist
-- Solution: Verify AWS credentials and S3 bucket in `rapidphoto-dev` region
+- Solution: Verify AWS credentials and S3 bucket in `rapidphoto-adamisom` region
 
 ---
 

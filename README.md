@@ -96,7 +96,7 @@ JWT_SECRET=your-256-bit-secret
 AWS_ACCESS_KEY_ID=your-key
 AWS_SECRET_ACCESS_KEY=your-secret
 AWS_REGION=us-east-1
-AWS_S3_BUCKET=rapidphoto-dev
+AWS_S3_BUCKET=rapidphoto-adamisom
 
 # Web Frontend
 VITE_API_URL=http://localhost:8080
