@@ -200,18 +200,15 @@ curl http://localhost:8080/api/photos
 # Expected: 401 Unauthorized
 ```
 
-**4. Test Protected Endpoint (with token → 200)**
+**4. Test Health Check (verify server is running)**
 ```bash
-# Uses the TOKEN you saved in step 1
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8080/api/photos
-# Expected: 200 OK (empty list initially)
-
-# Pro tip: If you need a fresh token, just:
-# - Repeat step 1 with a new email
-# - Copy the token and export TOKEN="..."
-# - Then re-run this command
+curl http://localhost:8080/actuator/health
+# Expected: 200 OK with {"status":"UP"}
 ```
+
+⚠️ **Phase 1 Limitation**: Only `/api/auth/**` endpoints exist in Phase 1. Protected endpoints like `/api/photos` will be added in Phase 2-3.
+
+To fully test authentication, see the next phase documentation.
 
 **5. Test Duplicate Email (should fail)**
 ```bash
