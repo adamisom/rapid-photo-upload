@@ -327,7 +327,7 @@ Example:
 
 ### S3 Bucket Configuration
 
-**Bucket Name**: `rapidphoto-adamisom` (or your custom name)
+**Bucket Name**: `rapidphotoupload-adamisom` (or your custom name)
 
 **CORS Configuration**:
 ```json
@@ -367,7 +367,7 @@ DB_PASSWORD=postgres
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=your-aws-access-key
 AWS_SECRET_ACCESS_KEY=your-aws-secret-key
-AWS_S3_BUCKET=rapidphoto-adamisom
+AWS_S3_BUCKET=rapidphotoupload-adamisom
 ```
 
 ### Optional Configuration

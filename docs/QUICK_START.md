@@ -35,7 +35,7 @@
 - Git
 
 **AWS Setup** (required for Phase 2+):
-1. Create AWS S3 bucket: `rapidphoto-adamisom` (or your bucket name)
+1. Create AWS S3 bucket: `rapidphotoupload-adamisom` (or your bucket name)
 2. Enable CORS on bucket:
    - Go to AWS Console → S3 → Your Bucket → Permissions → CORS
    - Add configuration:
@@ -56,7 +56,7 @@
    export AWS_ACCESS_KEY_ID=your-key
    export AWS_SECRET_ACCESS_KEY=your-secret
    export AWS_REGION=us-east-1
-   export AWS_S3_BUCKET=rapidphoto-adamisom
+   export AWS_S3_BUCKET=rapidphotoupload-adamisom
    ```
 
 ---
@@ -202,7 +202,7 @@ export DB_PASSWORD="postgres"
 
 # AWS S3 (required for Phase 2 onwards)
 export AWS_REGION="us-east-1"
-export AWS_S3_BUCKET="rapidphoto-adamisom"
+export AWS_S3_BUCKET="rapidphotoupload-adamisom"
 export AWS_ACCESS_KEY_ID="your-key"
 export AWS_SECRET_ACCESS_KEY="your-secret"
 ```

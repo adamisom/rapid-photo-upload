@@ -3755,7 +3755,7 @@ All environment variables are now documented in `env.example` and the `.env` fil
 
 **User**
 
-change all references to AWS_S3_BUCKET or S3_BUCKET to  use value`rapidphoto-adamisom`
+change all references to AWS_S3_BUCKET or S3_BUCKET to  use value`rapidphotoupload-adamisom`
 
 ---
 
@@ -3799,7 +3799,7 @@ DB_PASSWORD=postgres
 AWS_REGION=us-east-1
 
 # S3 bucket name
-AWS_S3_BUCKET=rapidphoto-adamisom
+AWS_S3_BUCKET=rapidphotoupload-adamisom
 
 # AWS access key ID
 AWS_ACCESS_KEY_ID=
@@ -3857,7 +3857,7 @@ jwt.expiration=86400000
 
 # AWS S3 Configuration (Optional for Phase 2+)
 aws.region=${AWS_REGION:us-east-1}
-aws.s3.bucket=${AWS_S3_BUCKET:rapidphoto-adamisom}
+aws.s3.bucket=${AWS_S3_BUCKET:rapidphotoupload-adamisom}
 aws.accessKeyId=${AWS_ACCESS_KEY_ID:}
 aws.secretAccessKey=${AWS_SECRET_ACCESS_KEY:}
 s3.presigned-url-expiration-minutes=30
@@ -3879,7 +3879,7 @@ logging.level.org.springframework.web=DEBUG
 ```
 
 ```markdown
-AWS_S3_BUCKET=rapidphoto-adamisom
+AWS_S3_BUCKET=rapidphotoupload-adamisom
 ```
 
 Let me check QUICK_START.md for the exact text:
@@ -4062,7 +4062,7 @@ export DB_PASSWORD="postgres"
 
 # AWS S3 (required for Phase 2 onwards)
 export AWS_REGION="us-east-1"
-export AWS_S3_BUCKET="rapidphoto-adamisom"
+export AWS_S3_BUCKET="rapidphotoupload-adamisom"
 export AWS_ACCESS_KEY_ID="your-key"
 export AWS_SECRET_ACCESS_KEY="your-secret"
 ```
@@ -4311,7 +4311,7 @@ lsof -i :8080 | grep LISTEN | awk '{print $2}' | xargs kill -9
 - Git
 
 **AWS Setup** (before starting backend):
-1. Create AWS S3 bucket: `rapidphoto-adamisom`
+1. Create AWS S3 bucket: `rapidphotoupload-adamisom`
 2. Get AWS credentials (Access Key ID + Secret Access Key)
 3. Set environment variables:
    ```bash
@@ -4464,7 +4464,7 @@ export DB_PASSWORD="postgres"
 
 # AWS S3 (required for Phase 2 onwards)
 export AWS_REGION="us-east-1"
-export AWS_S3_BUCKET="rapidphoto-adamisom"
+export AWS_S3_BUCKET="rapidphotoupload-adamisom"
 export AWS_ACCESS_KEY_ID="your-key"
 export AWS_SECRET_ACCESS_KEY="your-secret"
 ```
@@ -4713,7 +4713,7 @@ lsof -i :8080 | grep LISTEN | awk '{print $2}' | xargs kill -9
 - Git
 
 **AWS Setup** (before starting backend):
-1. Create AWS S3 bucket: `rapidphoto-adamisom`
+1. Create AWS S3 bucket: `rapidphotoupload-adamisom`
 2. Get AWS credentials (Access Key ID + Secret Access Key)
 3. Set environment variables:
    ```bash
@@ -4866,7 +4866,7 @@ export DB_PASSWORD="postgres"
 
 # AWS S3 (required for Phase 2 onwards)
 export AWS_REGION="us-east-1"
-export AWS_S3_BUCKET="rapidphoto-adamisom"
+export AWS_S3_BUCKET="rapidphotoupload-adamisom"
 export AWS_ACCESS_KEY_ID="your-key"
 export AWS_SECRET_ACCESS_KEY="your-secret"
 ```
@@ -4950,7 +4950,7 @@ All required secrets must come from environment variables.
 
 ### S3 access errors (Phase 2+)
 - Wrong AWS credentials or bucket doesn't exist
-- Solution: Verify AWS credentials and S3 bucket in `rapidphoto-adamisom` region
+- Solution: Verify AWS credentials and S3 bucket in `rapidphotoupload-adamisom` region
 
 ---
 
@@ -5189,7 +5189,7 @@ JWT_SECRET=your-256-bit-secret
 AWS_ACCESS_KEY_ID=your-key
 AWS_SECRET_ACCESS_KEY=your-secret
 AWS_REGION=us-east-1
-AWS_S3_BUCKET=rapidphoto-adamisom
+AWS_S3_BUCKET=rapidphotoupload-adamisom
 
 # Web Frontend
 VITE_API_URL=http://localhost:8080
@@ -5258,7 +5258,7 @@ Review AI-generated security code manually before committing.
 
 Now let me commit these changes:
 
-✅ **Done!** Updated all S3 bucket references from `rapidphoto-dev` to `rapidphoto-adamisom` across:
+✅ **Done!** Updated all S3 bucket references from `rapidphoto-dev` to `rapidphotoupload-adamisom` across:
 - `env.example`
 - `application.properties`
 - `QUICK_START.md`
