@@ -60,16 +60,27 @@ In another terminal, test immediately using the commands below.
 ## Test: Register User
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+# Register and automatically export token + userId
+export TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "testuser@example.com",
-    "password": "TestPassword123"
-  }' | jq .
+  -d '{"email":"testuser@example.com","password":"TestPassword123"}' | jq -r '.token') && \
+export USER_ID=$(curl -s -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testuser@example.com","password":"TestPassword123"}' | jq -r '.userId') && \
+echo "✅ Token: $TOKEN" && echo "✅ User ID: $USER_ID"
+```
 
-# Save for later tests:
-export TOKEN="<token-from-response>"
-export USER_ID="<userId-from-response>"
+**Or simpler** (single register call):
+```bash
+RESPONSE=$(curl -s -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testuser@example.com","password":"TestPassword123"}')
+
+export TOKEN=$(echo $RESPONSE | jq -r '.token')
+export USER_ID=$(echo $RESPONSE | jq -r '.userId')
+
+echo "✅ Token: $TOKEN"
+echo "✅ User ID: $USER_ID"
 ```
 
 **Expected**: 200 OK with token, userId, email

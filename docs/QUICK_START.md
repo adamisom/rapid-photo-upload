@@ -376,11 +376,15 @@ All endpoints except `/api/auth/**` require `Authorization: Bearer {token}` head
 
 ## Testing Commands (Postman or curl)
 
-### Register
+### Register & Export Token
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+# Register and export token in one command
+RESPONSE=$(curl -s -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"pass123456"}'
+  -d '{"email":"user@example.com","password":"pass123456"}')
+
+export TOKEN=$(echo $RESPONSE | jq -r '.token')
+echo "✅ Token: $TOKEN"
 ```
 
 ### Login
@@ -390,9 +394,8 @@ curl -X POST http://localhost:8080/api/auth/login \
   -d '{"email":"user@example.com","password":"pass123456"}'
 ```
 
-### Protected Endpoint (substitute TOKEN from login response)
+### Protected Endpoint (uses $TOKEN from above)
 ```bash
-TOKEN="eyJhbGciOiJIUzUxMiJ9..."
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/api/photos
 ```
