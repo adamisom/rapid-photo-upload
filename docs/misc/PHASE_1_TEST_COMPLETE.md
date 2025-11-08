@@ -276,6 +276,28 @@ createdb rapidphoto_dev
 
 ---
 
+## 🚀 Running Phase 1
+
+From the project root:
+
+```bash
+# Set up environment variables
+export $(cat env.example | xargs)
+
+# Enter backend directory
+cd backend
+
+# Build the project
+./mvnw clean install -DskipTests
+
+# Run the server
+./mvnw spring-boot:run
+
+# API will be at http://localhost:8080
+```
+
+---
+
 ## 📝 Next Steps: Phase 2
 
 Phase 1 foundation is complete and tested. Ready to implement Phase 2: S3 Integration & Upload API
