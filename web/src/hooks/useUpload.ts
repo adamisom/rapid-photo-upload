@@ -7,7 +7,7 @@
  * Handles: file selection, presigned URLs, S3 uploads, progress tracking
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { uploadService } from '../services/uploadService';
 import type { UploadFile } from '../types';
 
@@ -24,6 +24,11 @@ export interface UploadBatch {
   id: string;
   files: UploadFile[];
   completedAt: Date;
+}
+
+interface UploadState {
+  activeFiles: UploadFile[];
+  completedBatches: UploadBatch[];
 }
 
 interface UploadManager {
@@ -43,15 +48,15 @@ interface UploadManager {
 }
 
 export const useUpload = (maxConcurrent: number = 5): UploadManager => {
-  const [files, setFiles] = useState<UploadFile[]>([]);
+  // Combined state for atomic updates
+  const [uploadState, setUploadState] = useState<UploadState>({
+    activeFiles: [],
+    completedBatches: []
+  });
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
-  const [completedBatches, setCompletedBatches] = useState<UploadBatch[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalProgress, setTotalProgress] = useState(0);
-
-  // Use ref to pass data from setFiles callback to setCompletedBatches
-  const batchToAddRef = useRef<{ id: string; files: UploadFile[] } | null>(null);
 
   const addFiles = useCallback((newFiles: File[]) => {
     setError(null);
@@ -61,43 +66,59 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
       status: 'pending',
       progress: 0,
     }));
-    setFiles((prev) => [...prev, ...uploadFiles]);
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: [...prev.activeFiles, ...uploadFiles]
+    }));
   }, []);
 
   const removeFile = useCallback((fileId: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== fileId));
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: prev.activeFiles.filter((f) => f.id !== fileId)
+    }));
   }, []);
 
   const clearLastBatch = useCallback(() => {
-    setCompletedBatches((prev) => prev.slice(1));
+    setUploadState((prev) => ({
+      ...prev,
+      completedBatches: prev.completedBatches.slice(1)
+    }));
   }, []);
 
   const clearPreviousBatches = useCallback(() => {
-    setCompletedBatches((prev) => prev.slice(0, 1));
+    setUploadState((prev) => ({
+      ...prev,
+      completedBatches: prev.completedBatches.slice(0, 1)
+    }));
   }, []);
 
   const updateFileProgress = useCallback((fileId: string, progress: number) => {
-    setFiles((prev) =>
-      prev.map((f) => (f.id === fileId ? { ...f, progress } : f))
-    );
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: prev.activeFiles.map((f) => 
+        f.id === fileId ? { ...f, progress } : f
+      )
+    }));
   }, []);
 
   const updateFileStatus = useCallback(
     (fileId: string, status: UploadFile['status'], error?: string) => {
-      setFiles((prev) =>
-        prev.map((f) =>
+      setUploadState((prev) => ({
+        ...prev,
+        activeFiles: prev.activeFiles.map((f) =>
           f.id === fileId
             ? { ...f, status, progress: status === 'completed' || status === 'failed' ? 100 : f.progress, error }
             : f
         )
-      );
+      }));
     },
     []
   );
 
   const startUpload = useCallback(async () => {
     // Only upload pending files
-    const pendingFiles = files.filter((f) => f.status === 'pending');
+    const pendingFiles = uploadState.activeFiles.filter((f) => f.status === 'pending');
     
     if (pendingFiles.length === 0) {
       setError('No files to upload');
@@ -168,48 +189,42 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     } finally {
       setIsUploading(false);
 
-      // Step 1: Update files and store batch info in ref
-      setFiles((currentFiles) => {
-        const completedFilesFromBatch = currentFiles.filter((f) => 
+      // ATOMIC STATE UPDATE: Move completed files to batch history
+      setUploadState((current) => {
+        // Extract completed files from THIS batch only
+        const completedFilesFromBatch = current.activeFiles.filter((f) => 
           (f.status === 'completed' || f.status === 'failed') && 
           pendingFiles.some((pf) => pf.id === f.id)
         );
         
-        // Store in ref to use in next state update (NO NESTING!)
-        if (completedFilesFromBatch.length > 0) {
-          batchToAddRef.current = {
-            id: newBatchId,
-            files: completedFilesFromBatch
-          };
-        }
+        // Create new batch if we have completed files
+        const newBatch = completedFilesFromBatch.length > 0 ? {
+          id: newBatchId,
+          files: completedFilesFromBatch,
+          completedAt: new Date()
+        } : null;
         
-        // Return filtered files (remove completed ones)
-        return currentFiles.filter((f) => f.status === 'pending' || f.status === 'uploading');
+        // Build new completedBatches array with idempotency check (for React StrictMode)
+        const newBatches = newBatch 
+          ? (current.completedBatches.some(b => b.id === newBatch.id)
+              ? current.completedBatches // Already exists - skip
+              : [newBatch, ...current.completedBatches]) // Add to front
+          : current.completedBatches;
+        
+        // Return new state with both updates atomically
+        return {
+          activeFiles: current.activeFiles.filter(f => 
+            f.status === 'pending' || f.status === 'uploading'
+          ),
+          completedBatches: newBatches
+        };
       });
-      
-      // Step 2: Update completed batches using ref data (SEPARATE!)
-      if (batchToAddRef.current) {
-        const batchData = batchToAddRef.current;
-        setCompletedBatches((prev) => {
-          // Check if batch already exists (idempotency for React StrictMode)
-          if (prev.some(b => b.id === batchData.id)) {
-            return prev;
-          }
-          // Add new batch to front of array
-          return [{
-            id: batchData.id,
-            files: batchData.files,
-            completedAt: new Date()
-          }, ...prev];
-        });
-        batchToAddRef.current = null; // Clear ref
-      }
 
       // Calculate total progress for pending files only
       const completedCount = pendingFiles.filter((f) => f.status === 'completed').length;
       setTotalProgress((completedCount / pendingFiles.length) * 100);
     }
-  }, [files, maxConcurrent, updateFileProgress, updateFileStatus]);
+  }, [uploadState.activeFiles, maxConcurrent, updateFileProgress, updateFileStatus]);
 
   const cancelUpload = useCallback(() => {
     setIsUploading(false);
@@ -217,18 +232,20 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
   }, []);
 
   const reset = useCallback(() => {
-    setFiles([]);
+    setUploadState({
+      activeFiles: [],
+      completedBatches: []
+    });
     setCurrentBatchId(null);
-    setCompletedBatches([]);
     setIsUploading(false);
     setError(null);
     setTotalProgress(0);
   }, []);
 
   return {
-    files,
+    files: uploadState.activeFiles,
     currentBatchId,
-    completedBatches,
+    completedBatches: uploadState.completedBatches,
     isUploading,
     totalProgress,
     error,
