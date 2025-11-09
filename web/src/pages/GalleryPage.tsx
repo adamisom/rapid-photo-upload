@@ -50,6 +50,14 @@ export default function GalleryPage() {
     }
   };
 
+  const formatFileSize = (bytes: number): string => {
+    const mb = bytes / 1024 / 1024;
+    if (mb < 1) {
+      return `${(bytes / 1024).toFixed(0)} KB`;
+    }
+    return `${mb.toFixed(2)} MB`;
+  };
+
   const totalPages = Math.ceil(totalPhotos / pageSize);
 
   return (
@@ -122,7 +130,7 @@ export default function GalleryPage() {
                       {photo.originalFilename}
                     </a>
                     <p className="text-xs text-gray-500 mb-4">
-                      {(photo.fileSizeBytes / 1024 / 1024).toFixed(2)} MB
+                      {formatFileSize(photo.fileSizeBytes)}
                     </p>
 
                     {/* Delete Button */}
