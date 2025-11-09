@@ -54,26 +54,26 @@ const AppRoutes = () => {
       <Header />
       <Routes>
         {/* Public Routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
-        {/* Protected Routes */}
-        <Route
-          path="/upload"
-          element={
-            <ProtectedRoute>
-              <UploadPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/gallery"
-          element={
-            <ProtectedRoute>
-              <GalleryPage />
-            </ProtectedRoute>
-          }
-        />
+            {/* Protected Routes */}
+            <Route
+              path="/upload"
+              element={
+                <ProtectedRoute>
+                  <UploadPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gallery"
+              element={
+                <ProtectedRoute>
+                  <GalleryPage />
+                </ProtectedRoute>
+              }
+            />
 
         {/* Root redirect */}
         <Route
@@ -88,7 +88,7 @@ const AppRoutes = () => {
         />
 
         {/* 404 */}
-        <Route path="*" element={<NotFoundPage />} />
+            <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   );

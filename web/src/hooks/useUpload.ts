@@ -7,7 +7,7 @@
  * Handles: file selection, presigned URLs, S3 uploads, progress tracking
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { uploadService } from '../services/uploadService';
 import type { UploadFile } from '../types';
 
@@ -29,8 +29,7 @@ export interface UploadBatch {
 interface UploadManager {
   files: UploadFile[];
   currentBatchId: string | null;
-  lastBatch: UploadBatch | null;
-  previousBatches: UploadBatch[];
+  completedBatches: UploadBatch[];
   isUploading: boolean;
   totalProgress: number;
   error: string | null;
@@ -46,11 +45,13 @@ interface UploadManager {
 export const useUpload = (maxConcurrent: number = 5): UploadManager => {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
-  const [lastBatch, setLastBatch] = useState<UploadBatch | null>(null);
-  const [previousBatches, setPreviousBatches] = useState<UploadBatch[]>([]);
+  const [completedBatches, setCompletedBatches] = useState<UploadBatch[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalProgress, setTotalProgress] = useState(0);
+
+  // Use ref to pass data from setFiles callback to setCompletedBatches
+  const batchToAddRef = useRef<{ id: string; files: UploadFile[] } | null>(null);
 
   const addFiles = useCallback((newFiles: File[]) => {
     setError(null);
@@ -68,11 +69,11 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
   }, []);
 
   const clearLastBatch = useCallback(() => {
-    setLastBatch(null);
+    setCompletedBatches((prev) => prev.slice(1));
   }, []);
 
   const clearPreviousBatches = useCallback(() => {
-    setPreviousBatches([]);
+    setCompletedBatches((prev) => prev.slice(0, 1));
   }, []);
 
   const updateFileProgress = useCallback((fileId: string, progress: number) => {
@@ -167,35 +168,42 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     } finally {
       setIsUploading(false);
 
-      // Capture completed files BEFORE we remove them from state
+      // Step 1: Update files and store batch info in ref
       setFiles((currentFiles) => {
-        // Find all files from this batch that completed or failed
         const completedFilesFromBatch = currentFiles.filter((f) => 
           (f.status === 'completed' || f.status === 'failed') && 
           pendingFiles.some((pf) => pf.id === f.id)
         );
         
-        // Move current batch to lastBatch
+        // Store in ref to use in next state update (NO NESTING!)
         if (completedFilesFromBatch.length > 0) {
-          // Use functional updater to get current lastBatch state
-          setLastBatch((currentLastBatch) => {
-            // Move previous lastBatch to previousBatches if it exists
-            if (currentLastBatch) {
-              setPreviousBatches((prev) => [currentLastBatch, ...prev]);
-            }
-            
-            // Return new lastBatch
-            return {
-              id: newBatchId,
-              files: completedFilesFromBatch,
-              completedAt: new Date(),
-            };
-          });
+          batchToAddRef.current = {
+            id: newBatchId,
+            files: completedFilesFromBatch
+          };
         }
-
-        // Remove completed files from active files list and return new state
+        
+        // Return filtered files (remove completed ones)
         return currentFiles.filter((f) => f.status === 'pending' || f.status === 'uploading');
       });
+      
+      // Step 2: Update completed batches using ref data (SEPARATE!)
+      if (batchToAddRef.current) {
+        const batchData = batchToAddRef.current;
+        setCompletedBatches((prev) => {
+          // Check if batch already exists (idempotency for React StrictMode)
+          if (prev.some(b => b.id === batchData.id)) {
+            return prev;
+          }
+          // Add new batch to front of array
+          return [{
+            id: batchData.id,
+            files: batchData.files,
+            completedAt: new Date()
+          }, ...prev];
+        });
+        batchToAddRef.current = null; // Clear ref
+      }
 
       // Calculate total progress for pending files only
       const completedCount = pendingFiles.filter((f) => f.status === 'completed').length;
@@ -211,8 +219,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
   const reset = useCallback(() => {
     setFiles([]);
     setCurrentBatchId(null);
-    setLastBatch(null);
-    setPreviousBatches([]);
+    setCompletedBatches([]);
     setIsUploading(false);
     setError(null);
     setTotalProgress(0);
@@ -221,8 +228,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
   return {
     files,
     currentBatchId,
-    lastBatch,
-    previousBatches,
+    completedBatches,
     isUploading,
     totalProgress,
     error,
