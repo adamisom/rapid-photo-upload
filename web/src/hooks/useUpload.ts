@@ -177,16 +177,19 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
         
         // Move current batch to lastBatch
         if (completedFilesFromBatch.length > 0) {
-          // Move previous lastBatch to previousBatches if it exists
-          if (lastBatch) {
-            setPreviousBatches((prev) => [lastBatch, ...prev]);
-          }
-          
-          // Create new lastBatch from completed files
-          setLastBatch({
-            id: newBatchId,
-            files: completedFilesFromBatch,
-            completedAt: new Date(),
+          // Use functional updater to get current lastBatch state
+          setLastBatch((currentLastBatch) => {
+            // Move previous lastBatch to previousBatches if it exists
+            if (currentLastBatch) {
+              setPreviousBatches((prev) => [currentLastBatch, ...prev]);
+            }
+            
+            // Return new lastBatch
+            return {
+              id: newBatchId,
+              files: completedFilesFromBatch,
+              completedAt: new Date(),
+            };
           });
         }
 
@@ -198,7 +201,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
       const completedCount = pendingFiles.filter((f) => f.status === 'completed').length;
       setTotalProgress((completedCount / pendingFiles.length) * 100);
     }
-  }, [files, maxConcurrent, updateFileProgress, updateFileStatus, lastBatch]);
+  }, [files, maxConcurrent, updateFileProgress, updateFileStatus]);
 
   const cancelUpload = useCallback(() => {
     setIsUploading(false);
