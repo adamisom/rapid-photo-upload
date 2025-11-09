@@ -1,24 +1,38 @@
 # RapidPhotoUpload - Architecture Guide
 
-**Status**: Phase 1-3 Backend Complete | Documentation Current as of: November 8, 2025
+**Status**: Phases 1-7 Complete (MVP Production Ready) | Documentation Current as of: November 9, 2025
 
 ---
 
 ## 1. System Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  Frontend Layer (React Web / React Native Mobile)              │
-│  - Initiates uploads                                           │
-│  - Manages local file selection                                │
-│  - Polls batch status                                          │
-│  - Displays gallery                                            │
-│                                                                 │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │
-                       │ HTTPS
-                       ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                                                                    │
+│  Web Frontend Layer (React + TypeScript + Vite)                   │
+│  @ http://localhost:5173                                          │
+│  ├─ Auth: Login/Register pages                                    │
+│  ├─ Upload: Drag-drop, progress tracking, batch management       │
+│  ├─ Gallery: Paginated grid, download, delete                    │
+│  └─ State: React Context (Auth, Upload), Custom Hooks           │
+│                                                                    │
+└────────────────────────────────┬─────────────────────────────────┘
+                                 │
+                                 │
+┌────────────────────────────────────────────────────────────────────┐
+│                                                                    │
+│  Mobile Frontend Layer (React Native + Expo)                      │
+│  @ Tested with Expo Go on iPhone                                  │
+│  ├─ Auth: Login/Register screens                                  │
+│  ├─ Upload: Photo picker, progress, batch management             │
+│  ├─ Gallery: Paginated grid, download, delete                    │
+│  └─ State: React Context (Auth, Upload), Custom Hooks, Secure    │
+│     Storage (expo-secure-store), FileSystem                      │
+│                                                                    │
+└────────────────────────────────┬─────────────────────────────────┘
+                                 │
+                                 │ HTTPS
+                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
 │  Backend Layer (Spring Boot 3.4 @ localhost:8080)             │
@@ -468,7 +482,127 @@ backend/src/main/java/com/rapid/
 
 ---
 
-## 9. Deployment Considerations
+## 9. Frontend Architecture (Phases 4-6)
+
+### Web Frontend (Phase 4-5)
+
+**Technology Stack**:
+- **Framework**: React 19 + TypeScript + Vite
+- **Styling**: Tailwind CSS v4
+- **Routing**: React Router v7
+- **HTTP Client**: Axios with JWT interceptors
+- **State Management**: React Context (Auth, Upload)
+- **Testing**: Vitest + @testing-library/react
+
+**Folder Structure**:
+```
+web/src/
+├── types/              → Centralized TypeScript interfaces (API responses)
+├── services/           → API client (Axios), auth, upload, photo services
+├── context/            → React Context for auth & upload state
+├── hooks/              → Custom hooks (useAuth, useUpload)
+├── utils/              → Validators, helpers
+├── components/         → Reusable UI (FormInput, Alert, ProgressBar)
+├── pages/              → Route components (Login, Register, Upload, Gallery)
+└── App.tsx             → Root with Router and providers
+```
+
+**Key Features**:
+- JWT token persistence in localStorage
+- S3 presigned URL uploads with progress tracking
+- Concurrency control (max 5-10 parallel uploads)
+- Gallery with pagination, download, delete
+- Responsive design (mobile-first)
+
+### Mobile Frontend (Phase 6)
+
+**Technology Stack**:
+- **Framework**: React Native + Expo
+- **Language**: TypeScript
+- **Routing**: Expo Router
+- **HTTP Client**: Axios with JWT interceptors
+- **State Management**: React Context
+- **Storage**: Expo SecureStore (JWT), AsyncStorage, FileSystem
+- **UI**: React Native built-ins + Expo components
+
+**Folder Structure**:
+```
+mobile/
+├── app/                → Expo Router file-based routing
+│   ├── (auth)/        → Login/Register screens
+│   └── (tabs)/        → Main navigation (Gallery, Upload, Profile)
+├── src/
+│   ├── types/         → TypeScript interfaces
+│   ├── services/      → API, auth, upload, photo services
+│   ├── context/       → React Context for auth
+│   ├── hooks/         → Custom hooks (useAuth, useUpload)
+│   ├── screens/       → Screen components
+│   └── components/    → Reusable UI components
+└── ENV_SETUP.md       → Configuration instructions
+```
+
+**Key Features**:
+- Secure token storage (Expo SecureStore)
+- Photo picker integration (expo-image-picker)
+- Photo library access (expo-media-library)
+- S3 presigned URL uploads with progress
+- Gallery with pagination, download, delete
+
+### Frontend State Management Pattern
+
+**Auth Context**:
+```
+AuthContext (login, logout, user, token, loading)
+ └─ useAuth() hook for easy access
+    └─ Used by Protected routes & login/register pages
+```
+
+**Upload Context**:
+```
+UploadContext (files, addFiles, removeFile, startUpload, cancelUpload)
+ └─ useUpload() hook with concurrency control
+    └─ Tracks individual file progress & batch status
+```
+
+---
+
+## 10. Production Architecture (Phase 7)
+
+**Deployment Topology**:
+```
+                    DNS / CloudFlare
+                          │
+                    ┌─────┴─────┐
+                    ▼           ▼
+            Web Frontend      Mobile Frontend
+        (Vercel/Netlify)   (Expo Hosting/Custom)
+                    │           │
+                    └─────┬─────┘
+                          │ HTTPS
+                          ▼
+                    AWS ALB (Load Balancer)
+                          │
+        ┌─────────────────┼─────────────────┐
+        ▼                 ▼                 ▼
+    Backend 1        Backend 2        Backend N
+    (EC2/ECS)        (EC2/ECS)        (EC2/ECS)
+        │                 │                 │
+        └─────────────────┼─────────────────┘
+                          │ JDBC
+                          ▼
+                    PostgreSQL RDS
+              (with read replicas)
+                    
+    └──────────────────────────────────────>  AWS S3 (Photos)
+    └──────────────────────────────────────>  CloudFront (CDN)
+    └──────────────────────────────────────>  CloudWatch (Logs & Metrics)
+```
+
+**See `docs/misc/PHASE_7_PRODUCTION_GUIDE.md`** for comprehensive deployment, monitoring, and operations details.
+
+---
+
+## 11. Deployment Considerations
 
 ### Production Checklist
 
@@ -505,7 +639,7 @@ backend/src/main/java/com/rapid/
 
 ---
 
-## 10. Troubleshooting & Debugging
+## 12. Troubleshooting & Debugging
 
 ### Common Issues
 
@@ -533,7 +667,7 @@ grep "Hibernate" application.log
 
 ---
 
-## 11. Testing the API
+## 13. Testing the API
 
 ### Quick Smoke Test
 
@@ -571,17 +705,21 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/photos | jq .
 
 ---
 
-## 12. Future Enhancements
+## 14. Future Enhancements
 
-### Potential Additions (Not Phase 1-3)
+### Post-MVP Roadmap
 
-- **WebSocket Support**: Real-time progress updates instead of polling
-- **Batch Uploads via Website**: Drag-and-drop multi-file upload UI
-- **Photo Metadata**: EXIF data extraction, face detection
-- **Image Optimization**: Automatic thumbnail generation
-- **Sharing**: Share photos with other users
-- **Collections**: Organize photos into albums
-- **Analytics**: Upload trends, storage usage analytics
+For detailed specifications, examples, and effort estimates, see **`docs/misc/FUTURE_ENHANCEMENTS.md`**.
+
+**Recommended Priority Order**:
+
+1. **Load Testing** (12 hrs) - Establish performance baselines
+2. **Image Compression** (16 hrs) - 80% S3 cost savings
+3. **Offline Support** (54 hrs) - Major UX improvement
+4. **API Documentation** (20 hrs) - Swagger/OpenAPI integration
+5. **Real-Time Features** (48 hrs) - WebSocket-based notifications
+
+**Total Investment**: ~150 hours (~4 weeks at 40 hrs/week)
 
 ---
 
@@ -589,8 +727,12 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/photos | jq .
 
 | Date | Version | Changes |
 |------|---------|---------|
-| 2025-11-08 | 1.0 | Initial architecture documentation for Phase 1-3 |
+| 2025-11-08 | 1.0 | Initial architecture documentation for Phase 1-3 (Backend) |
+| 2025-11-09 | 2.0 | Added Phases 4-7: Web frontend, mobile frontend, production architecture |
 
-**Next Update**: After Phase 4 (Web Frontend) completion, document frontend architecture and API integration patterns.
-
-
+**Completeness**: 
+- ✅ Backend (Phase 1-3): Fully documented
+- ✅ Web Frontend (Phase 4-5): Fully documented
+- ✅ Mobile Frontend (Phase 6): Fully documented
+- ✅ Production (Phase 7): Documented with link to Production Guide
+- ✅ Future Enhancements: Comprehensive roadmap in separate document
