@@ -48,31 +48,23 @@ public class UploadCommandService {
         UploadBatch batch;
         if (request.getBatchId() != null && !request.getBatchId().isEmpty()) {
             log.info("Looking for existing batch: {}", request.getBatchId());
-            // Try to find existing batch, or create new one with client-provided ID
+            
+            // Atomically insert batch if not exists (PostgreSQL ON CONFLICT)
+            // This is safe for concurrent requests - all will succeed
+            uploadBatchRepository.insertBatchIfNotExists(request.getBatchId(), userId);
+            log.info("Ensured batch exists (created or was already present): {}", request.getBatchId());
+            
+            // Now fetch it (guaranteed to exist)
             batch = uploadBatchRepository.findByIdAndUserId(request.getBatchId(), userId)
-                .orElseGet(() -> {
-                    log.info("Batch not found, creating new batch with id: {}", request.getBatchId());
-                    UploadBatch newBatch = new UploadBatch();
-                    newBatch.setId(request.getBatchId()); // Use client-provided ID
-                    newBatch.setUser(user);
-                    newBatch.setTotalCount(0); // Will be incremented atomically
-                    try {
-                        UploadBatch saved = uploadBatchRepository.saveAndFlush(newBatch);
-                        log.info("Created new batch: {} (FLUSHED)", saved.getId());
-                        return saved;
-                    } catch (Exception e) {
-                        log.error("FAILED to create batch: {}", request.getBatchId(), e);
-                        throw e;
-                    }
-                });
+                .orElseThrow(() -> new RuntimeException("Batch not found after insert"));
             log.info("Using batch: {}, current totalCount: {}", batch.getId(), batch.getTotalCount());
         } else {
             log.info("No batchId provided, creating new batch with auto-generated ID");
             // No batchId provided - create new batch with auto-generated ID
             batch = new UploadBatch();
-            batch.setId(UUID.randomUUID().toString()); // Manually generate UUID
+            batch.setId(UUID.randomUUID().toString());
             batch.setUser(user);
-            batch.setTotalCount(0); // Will be incremented atomically
+            batch.setTotalCount(0);
             batch = uploadBatchRepository.saveAndFlush(batch);
             log.info("Created new batch: {} (FLUSHED)", batch.getId());
         }
