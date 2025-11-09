@@ -2,7 +2,7 @@
 
 Comprehensive reference for testing RapidPhotoUpload across all implementation phases.
 
-**Current Status**: Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅
+**Current Status**: Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅ | Phase 5 ✅ | Phase 6 ✅
 
 ---
 
@@ -439,6 +439,158 @@ npm run type-check  # Should pass
 npm run lint        # Should pass
 npm run build       # Should build successfully
 ```
+
+---
+
+# PHASE 5: Photo Gallery (Web)
+
+## Quick Gallery Smoke Test (3 minutes)
+
+### 1. Upload Photos First
+1. Go to http://localhost:5173/upload
+2. Select and upload 2-3 photos to backend
+3. Wait for completion
+
+### 2. Test Gallery Page
+1. Click "Gallery" in header navigation
+2. Should see photo grid (responsive 2-3 columns)
+3. Photos display thumbnails
+4. See filename and file size below each photo
+
+### 3. Test Photo Actions
+1. **Download**: Click photo → Opens in new tab
+2. **Delete**: Click delete button → Shows confirmation dialog
+   - Click "Cancel" → Dialog closes, photo remains
+   - Click "Delete" → Photo deleted, list updates
+3. **Pagination**: If > 20 photos, test Previous/Next buttons
+
+### 4. Test Error Handling
+1. Stop backend: `Ctrl+C` in backend terminal
+2. Refresh gallery: Should show error message
+3. Start backend again
+4. Click refresh (pull-down) → Photos load
+
+### 5. Verify Quality
+```bash
+npm run type-check  # Should pass
+npm run lint        # Should pass
+npm run build       # Should build successfully
+npm test            # Run unit tests
+```
+
+---
+
+# PHASE 6: React Native Mobile
+
+## Prerequisites for Mobile Testing
+
+1. **Expo Go app** on iPhone (download from App Store)
+2. **Backend running**: `cd backend && ./mvnw spring-boot:run`
+3. **Mac & iPhone on same WiFi**
+4. **Environment configured**: See `PHASE_6_ENV_SETUP.md`
+
+---
+
+## Quick Mobile Smoke Test (5 minutes with Expo Go)
+
+### Step 1: Setup Environment
+```bash
+cd mobile
+touch .env  # Create if not exists
+# Add to .env:
+# EXPO_PUBLIC_API_BASE_URL=http://192.168.1.YOUR_IP:8080
+# (Replace YOUR_IP with your Mac's IP from: ifconfig | grep inet)
+```
+
+### Step 2: Start Dev Server
+```bash
+cd mobile
+npm run start:go
+# Expo Go QR code will appear in terminal
+```
+
+### Step 3: Scan QR Code on iPhone
+1. Open **Expo Go** app on iPhone
+2. Tap **Scan QR code**
+3. Point camera at terminal QR code
+4. App loads automatically! 🎉
+
+### Step 4: Test Authentication Flow
+1. **Register**: 
+   - Tap "Create Account"
+   - Fill: email, password, confirm password
+   - Tap "Register" → Should go to Gallery tab
+   
+2. **Login** (different session):
+   - Kill app (swipe up)
+   - Reopen and restart dev server
+   - Tap "Login"
+   - Use credentials from step 1
+   - Submit → Should go to Gallery
+
+### Step 5: Test Upload Flow
+1. Tap **Upload** tab
+2. Tap **"Select Photos"** button
+3. Choose 2-3 photos from camera roll
+4. See list of files with size
+5. Tap **"Upload All"**
+6. Watch progress bars (individual + total)
+7. Status changes: uploading → completed ✓
+
+### Step 6: Test Gallery
+1. Tap **Gallery** tab
+2. Should see uploaded photos in 2-column grid
+3. Tap photo → Opens in browser/viewer
+4. Tap delete → Shows confirmation
+   - "Cancel" → Dialog closes
+   - "Delete" → Photo removed, list updates
+5. If > 20 photos → Test pagination (Previous/Next)
+
+### Step 7: Test Profile & Logout
+1. Tap **Profile** tab
+2. See user email with avatar initial
+3. Tap **"Logout"** button
+4. Confirmation dialog → Tap "Logout"
+5. Should redirect to login screen ✓
+
+### Step 8: Verify Quality
+```bash
+cd mobile
+npm run lint    # Should pass (0 issues)
+```
+
+---
+
+## Alternative Testing Methods
+
+### Method 2: Tunnel Mode (No WiFi needed)
+```bash
+cd mobile
+npm run start:tunnel
+# Scan QR code from terminal (works over cellular)
+```
+
+### Method 3: Manual URL Entry
+```bash
+cd mobile
+npm start
+# Get URL from terminal output
+# In Expo Go: Tap "Explore" → "Enter URL manually"
+# Paste the URL
+```
+
+---
+
+## Troubleshooting Mobile Tests
+
+| Issue | Solution |
+|-------|----------|
+| "Cannot connect to server" | Verify Mac & iPhone on same WiFi, check firewall |
+| "Blank white screen" | Check terminal for errors, restart dev server |
+| "API error on upload" | Verify backend is running, check `.env` API URL |
+| "Photos not loading" | Backend down, check: `curl http://localhost:8080/actuator/health` |
+| "QR code won't scan" | Use Method 2 (tunnel mode) or Method 3 (manual URL) |
+| "App keeps reloading" | Run `npm run lint` to check for TS errors |
 
 ---
 
