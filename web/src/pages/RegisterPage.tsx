@@ -49,7 +49,18 @@ export default function RegisterPage() {
       await register(email, password);
       navigate('/upload');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Registration failed. Email may already exist.';
+      console.error('Registration error:', err);
+      let message = 'Registration failed. Email may already exist.';
+      
+      if (err instanceof Error) {
+        message = err.message;
+      }
+      
+      // Check for network errors
+      if (message.includes('Failed to fetch') || message.includes('Network')) {
+        message = 'Cannot connect to server. Is the backend running on http://localhost:8080?';
+      }
+      
       setError(message);
     }
   };

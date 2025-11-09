@@ -42,7 +42,18 @@ export default function LoginPage() {
       await login(email, password);
       navigate('/upload');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
+      console.error('Login error:', err);
+      let message = 'Login failed. Please check your credentials.';
+      
+      if (err instanceof Error) {
+        message = err.message;
+      }
+      
+      // Check for network errors
+      if (message.includes('Failed to fetch') || message.includes('Network')) {
+        message = 'Cannot connect to server. Is the backend running on http://localhost:8080?';
+      }
+      
       setError(message);
     }
   };

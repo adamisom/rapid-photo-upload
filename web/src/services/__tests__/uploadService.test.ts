@@ -11,7 +11,7 @@ const mockXHR = {
   status: 200,
 };
 
-global.XMLHttpRequest = vi.fn(() => mockXHR) as any;
+global.XMLHttpRequest = vi.fn(() => mockXHR) as unknown as typeof XMLHttpRequest;
 
 describe('uploadService', () => {
   beforeEach(() => {
@@ -25,22 +25,24 @@ describe('uploadService', () => {
 
       // Setup XHR mock to simulate progress
       let progressCallback: ((event: ProgressEvent) => void) | null = null;
-      mockXHR.addEventListener.mockImplementation((event: string, callback: Function) => {
+      mockXHR.addEventListener.mockImplementation((event: string, callback: (evt: ProgressEvent) => void) => {
         if (event === 'progress') {
-          progressCallback = callback as any;
+          progressCallback = callback;
         }
       });
 
       // Start the upload in a non-blocking way
-      const uploadPromise = uploadService.uploadToS3('https://presigned.url', mockFile, onProgress);
+      void uploadService.uploadToS3('https://presigned.url', mockFile, onProgress);
 
       // Simulate progress event: 50% complete
       if (progressCallback) {
-        progressCallback({
-          loaded: 500,
-          total: 1000,
-          lengthComputable: true,
-        } as any);
+        progressCallback(
+          new ProgressEvent('progress', {
+            loaded: 500,
+            total: 1000,
+            lengthComputable: true,
+          })
+        );
       }
 
       expect(onProgress).toHaveBeenCalledWith(50);
@@ -51,21 +53,23 @@ describe('uploadService', () => {
       const mockFile = new File(['test'], 'test.jpg');
 
       let progressCallback: ((event: ProgressEvent) => void) | null = null;
-      mockXHR.addEventListener.mockImplementation((event: string, callback: Function) => {
+      mockXHR.addEventListener.mockImplementation((event: string, callback: (evt: ProgressEvent) => void) => {
         if (event === 'progress') {
-          progressCallback = callback as any;
+          progressCallback = callback;
         }
       });
 
-      uploadService.uploadToS3('https://presigned.url', mockFile, onProgress);
+      void uploadService.uploadToS3('https://presigned.url', mockFile, onProgress);
 
       // Simulate progress > 100%
       if (progressCallback) {
-        progressCallback({
-          loaded: 1500,
-          total: 1000,
-          lengthComputable: true,
-        } as any);
+        progressCallback(
+          new ProgressEvent('progress', {
+            loaded: 1500,
+            total: 1000,
+            lengthComputable: true,
+          })
+        );
       }
 
       expect(onProgress).toHaveBeenCalledWith(100);
@@ -75,9 +79,9 @@ describe('uploadService', () => {
       const mockFile = new File(['test'], 'test.jpg');
 
       let loadCallback: (() => void) | null = null;
-      mockXHR.addEventListener.mockImplementation((event: string, callback: Function) => {
+      mockXHR.addEventListener.mockImplementation((event: string, callback: () => void) => {
         if (event === 'load') {
-          loadCallback = callback as any;
+          loadCallback = callback;
         }
       });
       mockXHR.status = 200;
@@ -95,9 +99,9 @@ describe('uploadService', () => {
       const mockFile = new File(['test'], 'test.jpg');
 
       let errorCallback: (() => void) | null = null;
-      mockXHR.addEventListener.mockImplementation((event: string, callback: Function) => {
+      mockXHR.addEventListener.mockImplementation((event: string, callback: () => void) => {
         if (event === 'error') {
-          errorCallback = callback as any;
+          errorCallback = callback;
         }
       });
 
@@ -114,9 +118,9 @@ describe('uploadService', () => {
       const mockFile = new File(['test'], 'test.jpg');
 
       let abortCallback: (() => void) | null = null;
-      mockXHR.addEventListener.mockImplementation((event: string, callback: Function) => {
+      mockXHR.addEventListener.mockImplementation((event: string, callback: () => void) => {
         if (event === 'abort') {
-          abortCallback = callback as any;
+          abortCallback = callback;
         }
       });
 
