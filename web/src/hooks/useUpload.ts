@@ -83,21 +83,16 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     setIsUploading(true);
     setError(null);
 
-    try {
-      // Create or reuse batch
-      let currentBatchId = batchId;
-      if (!currentBatchId) {
-        currentBatchId = uuidv4();
-        setBatchId(currentBatchId);
-      }
+    // Generate new batchId when "Start Upload" is clicked
+    const newBatchId = uuidv4();
+    setBatchId(newBatchId);
 
+    try {
       // Upload files with concurrency control
       const uploadQueue = [...files];
       const activeUploads = new Set<string>();
 
-      for (let i = 0; i < uploadQueue.length; i++) {
-        const file = uploadQueue[i];
-
+      for (const file of uploadQueue) {
         // Wait for a slot if we're at max concurrent
         while (activeUploads.size >= maxConcurrent) {
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -110,23 +105,13 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
           try {
             updateFileStatus(file.id, 'uploading');
 
-            // Step 1: Get presigned URL
-            // Only pass batchId if it already exists (after first file)
-            // On first file (i === 0), let backend create the batch
-            const batchIdToUse = i === 0 ? undefined : currentBatchId;
-            
+            // Step 1: Get presigned URL (with client-generated batchId)
             const initiateResponse = await uploadService.initiateUpload(
               file.file.name,
               file.file.size,
               file.file.type || 'application/octet-stream',
-              batchIdToUse
+              newBatchId // Pass the new batchId to all files
             );
-            
-            // After first file, update batchId with the one from backend
-            if (i === 0 && initiateResponse.batchId && !currentBatchId) {
-              currentBatchId = initiateResponse.batchId;
-              setBatchId(currentBatchId);
-            }
 
             // Step 2: Upload to S3
             await uploadService.uploadToS3(
@@ -163,7 +148,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
       const completedCount = files.filter((f) => f.status === 'completed').length;
       setTotalProgress((completedCount / files.length) * 100);
     }
-  }, [files, batchId, maxConcurrent, updateFileProgress, updateFileStatus]);
+  }, [files, maxConcurrent, updateFileProgress, updateFileStatus]);
 
   const cancelUpload = useCallback(() => {
     setIsUploading(false);

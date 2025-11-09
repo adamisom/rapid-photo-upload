@@ -86,7 +86,8 @@ class UploadCommandServiceTest {
         assertNotNull(response.getUploadUrl());
         assertEquals("batch-123", response.getBatchId());
         
-        verify(uploadBatchRepository).save(any(UploadBatch.class));
+        // Now called twice: once to create, once to increment totalCount
+        verify(uploadBatchRepository, times(2)).save(any(UploadBatch.class));
         verify(photoRepository).save(any(Photo.class));
     }
 
@@ -96,6 +97,7 @@ class UploadCommandServiceTest {
         
         when(userRepository.findById("user-123")).thenReturn(Optional.of(testUser));
         when(uploadBatchRepository.findByIdAndUserId("batch-123", "user-123")).thenReturn(Optional.of(testBatch));
+        when(uploadBatchRepository.save(any(UploadBatch.class))).thenReturn(testBatch); // Mock the save for incrementing totalCount
         when(photoRepository.save(any(Photo.class))).thenReturn(testPhoto);
         when(s3Service.generatePresignedPutUrl(anyString(), anyString())).thenReturn("https://s3.url");
 
@@ -104,9 +106,9 @@ class UploadCommandServiceTest {
         assertNotNull(response);
         assertEquals("batch-123", response.getBatchId());
         
-        // Verify batch was retrieved but not created
-        verify(uploadBatchRepository, never()).save(any(UploadBatch.class));
+        // Verify batch was retrieved and then saved to increment totalCount
         verify(uploadBatchRepository).findByIdAndUserId("batch-123", "user-123");
+        verify(uploadBatchRepository).save(any(UploadBatch.class)); // Called once to increment count
     }
 
     @Test
@@ -126,6 +128,27 @@ class UploadCommandServiceTest {
         String s3Key = photoCaptor.getValue().getS3Key();
         assertTrue(s3Key.startsWith("user-123/"), "S3 key must start with userId");
         assertTrue(s3Key.contains("test.jpg"), "S3 key must contain filename");
+    }
+
+    @Test
+    void testInitiateUploadWithClientProvidedBatchIdCreatesNewBatch() {
+        // Test the new behavior where client provides a batchId that doesn't exist yet
+        InitiateUploadRequest request = new InitiateUploadRequest("test.jpg", 1024L, "image/jpeg", "client-batch-456");
+        
+        when(userRepository.findById("user-123")).thenReturn(Optional.of(testUser));
+        when(uploadBatchRepository.findByIdAndUserId("client-batch-456", "user-123")).thenReturn(Optional.empty());
+        when(uploadBatchRepository.save(any(UploadBatch.class))).thenReturn(testBatch);
+        when(photoRepository.save(any(Photo.class))).thenReturn(testPhoto);
+        when(s3Service.generatePresignedPutUrl(anyString(), anyString())).thenReturn("https://s3.url");
+
+        InitiateUploadResponse response = uploadCommandService.initiateUpload("user-123", request);
+
+        assertNotNull(response);
+        assertEquals("batch-123", response.getBatchId());
+        
+        // Verify batch was created with client-provided ID, then incremented
+        verify(uploadBatchRepository).findByIdAndUserId("client-batch-456", "user-123");
+        verify(uploadBatchRepository, times(2)).save(any(UploadBatch.class));
     }
 
     @Test
