@@ -75,7 +75,7 @@ class UploadCommandServiceTest {
         InitiateUploadRequest request = new InitiateUploadRequest("test.jpg", 1024L, "image/jpeg", null);
         
         when(userRepository.findById("user-123")).thenReturn(Optional.of(testUser));
-        when(uploadBatchRepository.save(any(UploadBatch.class))).thenReturn(testBatch);
+        when(uploadBatchRepository.saveAndFlush(any(UploadBatch.class))).thenReturn(testBatch);
         when(photoRepository.save(any(Photo.class))).thenReturn(testPhoto);
         when(s3Service.generatePresignedPutUrl(anyString(), anyString())).thenReturn("https://s3.url");
 
@@ -86,8 +86,8 @@ class UploadCommandServiceTest {
         assertNotNull(response.getUploadUrl());
         assertEquals("batch-123", response.getBatchId());
         
-        // Now called once to create, then atomic increment
-        verify(uploadBatchRepository).save(any(UploadBatch.class));
+        // Now uses saveAndFlush, then atomic increment
+        verify(uploadBatchRepository).saveAndFlush(any(UploadBatch.class));
         verify(uploadBatchRepository).incrementTotalCount(anyString());
         verify(photoRepository).save(any(Photo.class));
     }
@@ -117,7 +117,7 @@ class UploadCommandServiceTest {
         InitiateUploadRequest request = new InitiateUploadRequest("test.jpg", 1024L, "image/jpeg", null);
         
         when(userRepository.findById("user-123")).thenReturn(Optional.of(testUser));
-        when(uploadBatchRepository.save(any(UploadBatch.class))).thenReturn(testBatch);
+        when(uploadBatchRepository.saveAndFlush(any(UploadBatch.class))).thenReturn(testBatch);
         when(photoRepository.save(any(Photo.class))).thenReturn(testPhoto);
         when(s3Service.generatePresignedPutUrl(anyString(), anyString())).thenReturn("https://s3.url");
 
@@ -138,7 +138,7 @@ class UploadCommandServiceTest {
         
         when(userRepository.findById("user-123")).thenReturn(Optional.of(testUser));
         when(uploadBatchRepository.findByIdAndUserId("client-batch-456", "user-123")).thenReturn(Optional.empty());
-        when(uploadBatchRepository.save(any(UploadBatch.class))).thenReturn(testBatch);
+        when(uploadBatchRepository.saveAndFlush(any(UploadBatch.class))).thenReturn(testBatch);
         when(photoRepository.save(any(Photo.class))).thenReturn(testPhoto);
         when(s3Service.generatePresignedPutUrl(anyString(), anyString())).thenReturn("https://s3.url");
 
@@ -149,7 +149,7 @@ class UploadCommandServiceTest {
         
         // Verify batch was created with client-provided ID, then atomically incremented
         verify(uploadBatchRepository).findByIdAndUserId("client-batch-456", "user-123");
-        verify(uploadBatchRepository).save(any(UploadBatch.class));
+        verify(uploadBatchRepository).saveAndFlush(any(UploadBatch.class));
         verify(uploadBatchRepository).incrementTotalCount(anyString());
     }
 

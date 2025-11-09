@@ -56,19 +56,25 @@ public class UploadCommandService {
                     newBatch.setId(request.getBatchId()); // Use client-provided ID
                     newBatch.setUser(user);
                     newBatch.setTotalCount(0); // Will be incremented atomically
-                    UploadBatch saved = uploadBatchRepository.save(newBatch);
-                    log.info("Created new batch: {}", saved.getId());
-                    return saved;
+                    try {
+                        UploadBatch saved = uploadBatchRepository.saveAndFlush(newBatch);
+                        log.info("Created new batch: {} (FLUSHED)", saved.getId());
+                        return saved;
+                    } catch (Exception e) {
+                        log.error("FAILED to create batch: {}", request.getBatchId(), e);
+                        throw e;
+                    }
                 });
             log.info("Using batch: {}, current totalCount: {}", batch.getId(), batch.getTotalCount());
         } else {
-            log.info("No batchId provided, creating new batch");
+            log.info("No batchId provided, creating new batch with auto-generated ID");
             // No batchId provided - create new batch with auto-generated ID
             batch = new UploadBatch();
+            batch.setId(UUID.randomUUID().toString()); // Manually generate UUID
             batch.setUser(user);
             batch.setTotalCount(0); // Will be incremented atomically
-            batch = uploadBatchRepository.save(batch);
-            log.info("Created new batch: {}", batch.getId());
+            batch = uploadBatchRepository.saveAndFlush(batch);
+            log.info("Created new batch: {} (FLUSHED)", batch.getId());
         }
         
         // Atomically increment total count using database-level update

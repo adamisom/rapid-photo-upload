@@ -14,8 +14,7 @@ import java.util.List;
 })
 public class UploadBatch {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+    private String id; // Removed @GeneratedValue - ID can be set manually or by database
     
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id", nullable = false)
