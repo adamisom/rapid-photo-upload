@@ -70,17 +70,13 @@ export USER_ID=$(curl -s -X POST http://localhost:8080/api/auth/register \
 echo "✅ Token: $TOKEN" && echo "✅ User ID: $USER_ID"
 ```
 
-**Or simpler** (single register call):
+**Or simpler** (pipe directly to jq):
 ```bash
-RESPONSE=$(curl -s -X POST http://localhost:8080/api/auth/register \
+export TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"testuser@example.com","password":"TestPassword123"}')
-
-export TOKEN=$(echo $RESPONSE | jq -r '.token')
-export USER_ID=$(echo $RESPONSE | jq -r '.userId')
+  -d '{"email":"testuser@example.com","password":"TestPassword123"}' | jq -r '.token')
 
 echo "✅ Token: $TOKEN"
-echo "✅ User ID: $USER_ID"
 ```
 
 **Expected**: 200 OK with token, userId, email

@@ -379,11 +379,10 @@ All endpoints except `/api/auth/**` require `Authorization: Bearer {token}` head
 ### Register & Export Token
 ```bash
 # Register and export token in one command
-RESPONSE=$(curl -s -X POST http://localhost:8080/api/auth/register \
+export TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"pass123456"}')
+  -d '{"email":"user@example.com","password":"pass123456"}' | jq -r '.token')
 
-export TOKEN=$(echo $RESPONSE | jq -r '.token')
 echo "✅ Token: $TOKEN"
 ```
 
