@@ -86,7 +86,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl px-10 py-12">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-5xl font-bold text-gray-900 mb-3 tracking-tight">
+          <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
             RapidPhotoUpload
           </h1>
           <p className="text-gray-600 text-lg">
