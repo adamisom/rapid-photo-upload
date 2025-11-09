@@ -7,17 +7,25 @@
  */
 
 import { useRef } from 'react';
-import { useUpload } from '../hooks/useUpload';
+import { useUpload, type UploadBatch } from '../hooks/useUpload';
 import ProgressBar from '../components/ProgressBar';
 
 export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
-  const { files, isUploading, totalProgress, error, addFiles, removeFile, clearCompleted, startUpload } = useUpload(5);
-
-  // Separate completed/failed files from pending/uploading files
-  const completedFiles = files.filter((f) => f.status === 'completed' || f.status === 'failed');
-  const activeFiles = files.filter((f) => f.status === 'pending' || f.status === 'uploading');
+  const { 
+    files, 
+    lastBatch, 
+    previousBatches, 
+    isUploading, 
+    totalProgress, 
+    error, 
+    addFiles, 
+    removeFile, 
+    clearLastBatch, 
+    clearPreviousBatches, 
+    startUpload 
+  } = useUpload(5);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -66,6 +74,47 @@ export default function UploadPage() {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
+
+  // Helper to render a batch section
+  const renderBatchFiles = (batch: UploadBatch) => (
+    <div className="space-y-2">
+      {batch.files.map((file) => (
+        <div key={file.id} className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-start space-x-3">
+            {/* Status Icon */}
+            <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              {file.status === 'completed' && (
+                <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              )}
+              {file.status === 'failed' && (
+                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+
+            {/* File Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-medium text-gray-900 truncate text-sm">{file.file.name}</p>
+                <p className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                  file.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                }`}>
+                  {file.status === 'completed' ? 'Done' : 'Failed'}
+                </p>
+              </div>
+              <p className="text-xs text-gray-500">{formatFileSize(file.file.size)}</p>
+              {file.error && (
+                <p className="text-xs text-red-600 mt-2">{file.error}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-screen">
@@ -118,7 +167,7 @@ export default function UploadPage() {
         )}
 
         {/* File List & Progress */}
-        {activeFiles.length > 0 && (
+        {files.length > 0 && (
           <div className="space-y-6">
             {/* Overall Progress */}
             {isUploading && (
@@ -127,14 +176,14 @@ export default function UploadPage() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Overall Progress</p>
                     <p className="text-lg font-bold text-gray-900 mt-1">
-                      {activeFiles.filter((f) => f.status === 'completed').length} of {activeFiles.length} files uploaded
+                      {files.filter((f) => f.status === 'completed').length} of {files.length} files uploaded
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-blue-600">{Math.round(totalProgress)}%</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {activeFiles.filter((f) => f.status === 'failed').length > 0 && 
-                        `${activeFiles.filter((f) => f.status === 'failed').length} failed`}
+                      {files.filter((f) => f.status === 'failed').length > 0 && 
+                        `${files.filter((f) => f.status === 'failed').length} failed`}
                     </p>
                   </div>
                 </div>
@@ -155,13 +204,13 @@ export default function UploadPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <span>Start Upload ({activeFiles.length} file{activeFiles.length !== 1 ? 's' : ''})</span>
+                <span>Start Upload ({files.length} file{files.length !== 1 ? 's' : ''})</span>
               </button>
             )}
 
             {/* Active File Items */}
             <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-              {activeFiles.map((file) => (
+              {files.map((file) => (
                 <div key={file.id} className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200 p-4">
                   <div className="flex items-start space-x-3">
                     {/* Thumbnail / Status Icon */}
@@ -236,55 +285,63 @@ export default function UploadPage() {
           </div>
         )}
 
-        {/* Completed Files Section */}
-        {completedFiles.length > 0 && (
+        {/* Section 2: Last Batch */}
+        {lastBatch && (
           <div className="mt-8 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Completed Uploads</h2>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Last Batch</h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  {lastBatch.files.length} file{lastBatch.files.length !== 1 ? 's' : ''} • 
+                  {' '}{lastBatch.files.filter((f) => f.status === 'completed').length} completed, 
+                  {' '}{lastBatch.files.filter((f) => f.status === 'failed').length} failed
+                </p>
+              </div>
               <button
-                onClick={clearCompleted}
+                onClick={clearLastBatch}
                 className="text-sm text-gray-600 hover:text-red-600 font-medium transition-colors flex items-center space-x-1"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                <span>Clear All</span>
+                <span>Clear Last Batch</span>
               </button>
             </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-              {completedFiles.map((file) => (
-                <div key={file.id} className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="flex items-start space-x-3">
-                    {/* Status Icon */}
-                    <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                      {file.status === 'completed' && (
-                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      {file.status === 'failed' && (
-                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
+            <div className="max-h-64 overflow-y-auto pr-2">
+              {renderBatchFiles(lastBatch)}
+            </div>
+          </div>
+        )}
 
-                    {/* File Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-gray-900 truncate text-sm">{file.file.name}</p>
-                        <p className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                          file.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {file.status === 'completed' ? 'Done' : 'Failed'}
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-500">{formatFileSize(file.file.size)}</p>
-                      {file.error && (
-                        <p className="text-xs text-red-600 mt-2">{file.error}</p>
-                      )}
-                    </div>
-                  </div>
+        {/* Section 3: Previous Batches */}
+        {previousBatches.length > 0 && (
+          <div className="mt-8 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Previous Batches</h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  {previousBatches.length} batch{previousBatches.length !== 1 ? 'es' : ''}
+                </p>
+              </div>
+              <button
+                onClick={clearPreviousBatches}
+                className="text-sm text-gray-600 hover:text-red-600 font-medium transition-colors flex items-center space-x-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Clear All Previous</span>
+              </button>
+            </div>
+            <div className="max-h-96 overflow-y-auto pr-2 space-y-6">
+              {previousBatches.map((batch, index) => (
+                <div key={batch.id} className="border-l-4 border-gray-300 pl-4">
+                  <p className="text-sm font-medium text-gray-700 mb-3">
+                    Batch {previousBatches.length - index} • 
+                    {' '}{batch.files.filter((f) => f.status === 'completed').length} completed, 
+                    {' '}{batch.files.filter((f) => f.status === 'failed').length} failed
+                  </p>
+                  {renderBatchFiles(batch)}
                 </div>
               ))}
             </div>
@@ -292,7 +349,7 @@ export default function UploadPage() {
         )}
 
         {/* Empty State */}
-        {files.length === 0 && !error && (
+        {files.length === 0 && !lastBatch && previousBatches.length === 0 && !error && (
           <div className="text-center py-12">
             <p className="text-gray-500">No files selected yet</p>
           </div>

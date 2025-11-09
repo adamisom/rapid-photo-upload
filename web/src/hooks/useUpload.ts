@@ -20,15 +20,24 @@ const uuidv4 = () => {
   });
 };
 
+export interface UploadBatch {
+  id: string;
+  files: UploadFile[];
+  completedAt: Date;
+}
+
 interface UploadManager {
   files: UploadFile[];
-  batchId: string | null;
+  currentBatchId: string | null;
+  lastBatch: UploadBatch | null;
+  previousBatches: UploadBatch[];
   isUploading: boolean;
   totalProgress: number;
   error: string | null;
   addFiles: (newFiles: File[]) => void;
   removeFile: (fileId: string) => void;
-  clearCompleted: () => void;
+  clearLastBatch: () => void;
+  clearPreviousBatches: () => void;
   startUpload: () => Promise<void>;
   cancelUpload: () => void;
   reset: () => void;
@@ -36,7 +45,9 @@ interface UploadManager {
 
 export const useUpload = (maxConcurrent: number = 5): UploadManager => {
   const [files, setFiles] = useState<UploadFile[]>([]);
-  const [batchId, setBatchId] = useState<string | null>(null);
+  const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
+  const [lastBatch, setLastBatch] = useState<UploadBatch | null>(null);
+  const [previousBatches, setPreviousBatches] = useState<UploadBatch[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalProgress, setTotalProgress] = useState(0);
@@ -56,9 +67,12 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
   }, []);
 
-  const clearCompleted = useCallback(() => {
-    setFiles((prev) => prev.filter((f) => f.status !== 'completed' && f.status !== 'failed'));
-    setTotalProgress(0);
+  const clearLastBatch = useCallback(() => {
+    setLastBatch(null);
+  }, []);
+
+  const clearPreviousBatches = useCallback(() => {
+    setPreviousBatches([]);
   }, []);
 
   const updateFileProgress = useCallback((fileId: string, progress: number) => {
@@ -94,7 +108,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
 
     // Generate new batchId when "Start Upload" is clicked
     const newBatchId = uuidv4();
-    setBatchId(newBatchId);
+    setCurrentBatchId(newBatchId);
 
     try {
       // Upload files with concurrency control
@@ -153,11 +167,34 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     } finally {
       setIsUploading(false);
 
+      // Move current batch to lastBatch
+      if (lastBatch) {
+        // Move previous lastBatch to previousBatches
+        setPreviousBatches((prev) => [lastBatch, ...prev]);
+      }
+      
+      // Create new lastBatch from completed files
+      const completedFiles = files.filter((f) => 
+        (f.status === 'completed' || f.status === 'failed') && 
+        pendingFiles.some((pf) => pf.id === f.id)
+      );
+      
+      if (completedFiles.length > 0) {
+        setLastBatch({
+          id: newBatchId,
+          files: completedFiles,
+          completedAt: new Date(),
+        });
+      }
+
+      // Remove completed files from active files list
+      setFiles((prev) => prev.filter((f) => f.status === 'pending' || f.status === 'uploading'));
+
       // Calculate total progress for pending files only
       const completedCount = pendingFiles.filter((f) => f.status === 'completed').length;
       setTotalProgress((completedCount / pendingFiles.length) * 100);
     }
-  }, [files, maxConcurrent, updateFileProgress, updateFileStatus]);
+  }, [files, maxConcurrent, updateFileProgress, updateFileStatus, lastBatch]);
 
   const cancelUpload = useCallback(() => {
     setIsUploading(false);
@@ -166,7 +203,9 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
 
   const reset = useCallback(() => {
     setFiles([]);
-    setBatchId(null);
+    setCurrentBatchId(null);
+    setLastBatch(null);
+    setPreviousBatches([]);
     setIsUploading(false);
     setError(null);
     setTotalProgress(0);
@@ -174,13 +213,16 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
 
   return {
     files,
-    batchId,
+    currentBatchId,
+    lastBatch,
+    previousBatches,
     isUploading,
     totalProgress,
     error,
     addFiles,
     removeFile,
-    clearCompleted,
+    clearLastBatch,
+    clearPreviousBatches,
     startUpload,
     cancelUpload,
     reset,
