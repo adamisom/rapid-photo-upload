@@ -8,12 +8,14 @@
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import FormInput from '../components/FormInput';
 import { validators } from '../utils/validators';
 import { authService } from '../services/authService';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { refreshAuth } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,6 +43,7 @@ export default function LoginPage() {
     try {
       const response = await authService.login(email, password);
       authService.setAuthToken(response.token, response.userId, response.email);
+      refreshAuth(); // Tell AuthContext to refresh from localStorage
       navigate('/upload');
     } catch (err: any) {
       let message = 'Login failed. Please check your credentials.';

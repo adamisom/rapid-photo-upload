@@ -36,6 +36,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // Refresh auth state from localStorage (called after login/register)
+  const refreshAuth = () => {
+    const storedToken = authService.getToken();
+    const storedUserId = authService.getUserId();
+    const storedEmail = authService.getEmail();
+
+    if (storedToken && storedUserId && storedEmail) {
+      setToken(storedToken);
+      setUser({ id: storedUserId, email: storedEmail });
+    }
+  };
+
   const logout = () => {
     authService.clearAuthToken();
     setToken(null);
@@ -47,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     token,
     isAuthenticated: !!token,
     logout,
+    refreshAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
