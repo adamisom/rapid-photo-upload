@@ -2,7 +2,7 @@
 
 Comprehensive reference for testing RapidPhotoUpload across all implementation phases.
 
-**Current Status**: Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅
+**Current Status**: Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅
 
 ---
 
@@ -391,4 +391,54 @@ curl -X POST http://localhost:8080/api/upload/initiate \
 
 **Test file too large**
 - Use smaller test files: `dd if=/dev/urandom of=/tmp/small.bin bs=1024 count=10`
+
+---
+
+# PHASE 4: Web Frontend (React UI)
+
+## Quick Frontend Smoke Test (5 minutes)
+
+### 1. Start Frontend Dev Server
+```bash
+cd web
+npm install  # if not done yet
+npm run dev
+```
+
+**Expected**: Vite ready at `http://localhost:5173`
+
+### 2. Test Registration
+1. Open http://localhost:5173 → should redirect to /login
+2. Click "Sign up" → RegisterPage
+3. Fill form:
+   - Email: `test@example.com`
+   - Password: `TestPass123`
+   - Confirm: `TestPass123`
+4. Submit → should redirect to /upload
+5. Check browser localStorage: should have `token`, `userId`, `email`
+
+### 3. Test Login
+1. Click "Sign Out" in header
+2. Should redirect to /login
+3. Fill login form with credentials from step 2
+4. Submit → should redirect to /upload
+
+### 4. Test Upload Flow
+1. On /upload page:
+   - Drag a test image file, or
+   - Click drop zone to browse
+2. Select 2-3 image files
+3. See file list with progress bars
+4. Click "Start Upload"
+5. Watch progress (0-100% per file)
+6. Expected: All files complete (or show backend errors if server not running)
+
+### 5. Verify Quality
+```bash
+npm run type-check  # Should pass
+npm run lint        # Should pass
+npm run build       # Should build successfully
+```
+
+---
 
