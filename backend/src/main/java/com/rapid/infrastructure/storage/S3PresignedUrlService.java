@@ -38,7 +38,9 @@ public class S3PresignedUrlService {
     private int expirationMinutes;
     
     public String generatePresignedPutUrl(String userId, String filename) {
-        String s3Key = generateS3Key(userId, filename);
+        // If filename already contains full s3Key (userId/timestamp_uuid_name), use it directly
+        // Otherwise generate the key
+        String s3Key = filename.contains("/") ? filename : generateS3Key(userId, filename);
         
         PutObjectRequest putRequest = PutObjectRequest.builder()
             .bucket(bucketName)
@@ -63,7 +65,9 @@ public class S3PresignedUrlService {
     }
     
     public boolean verifyFileExists(String userId, String filename) {
-        String s3Key = generateS3Key(userId, filename);
+        // If filename already contains full s3Key (userId/timestamp_uuid_name), use it directly
+        // Otherwise generate the key
+        String s3Key = filename.contains("/") ? filename : generateS3Key(userId, filename);
         try {
             HeadObjectRequest request = HeadObjectRequest.builder()
                 .bucket(bucketName)
@@ -78,7 +82,9 @@ public class S3PresignedUrlService {
     }
     
     public long getFileSizeBytes(String userId, String filename) {
-        String s3Key = generateS3Key(userId, filename);
+        // If filename already contains full s3Key (userId/timestamp_uuid_name), use it directly
+        // Otherwise generate the key
+        String s3Key = filename.contains("/") ? filename : generateS3Key(userId, filename);
         HeadObjectRequest request = HeadObjectRequest.builder()
             .bucket(bucketName)
             .key(s3Key)
@@ -99,7 +105,9 @@ public class S3PresignedUrlService {
     }
     
     public String generatePresignedGetUrl(String userId, String filename) {
-        String s3Key = generateS3Key(userId, filename);
+        // If filename already contains full s3Key (userId/timestamp_uuid_name), use it directly
+        // Otherwise generate the key
+        String s3Key = filename.contains("/") ? filename : generateS3Key(userId, filename);
         
         GetObjectRequest getRequest = GetObjectRequest.builder()
             .bucket(bucketName)
