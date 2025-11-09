@@ -16,7 +16,7 @@ docker-compose up -d
 ### 2. Set Environment Variables
 ```bash
 export JWT_SECRET="your-minimum-64-character-jwt-secret-key-for-hs512"
-export AWS_REGION="us-east-1"
+export AWS_REGION="us-east-2"  # Must match your S3 bucket's region
 export AWS_ACCESS_KEY_ID="your-aws-key"
 export AWS_SECRET_ACCESS_KEY="your-aws-secret"
 export AWS_S3_BUCKET="your-bucket-name"

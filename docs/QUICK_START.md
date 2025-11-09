@@ -60,9 +60,9 @@
    echo $AWS_ACCESS_KEY_ID
    echo $AWS_SECRET_ACCESS_KEY
    ```
-4. Set remaining variables:
+4. Set remaining variables (match your bucket's region):
    ```bash
-   export AWS_REGION=us-east-1
+   export AWS_REGION=us-east-2  # Change to your bucket's region (e.g., us-west-1, eu-west-1)
    export AWS_S3_BUCKET=rapidphotoupload-adamisom
    ```
 
