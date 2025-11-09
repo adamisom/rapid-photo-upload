@@ -49,20 +49,20 @@ public class UploadCommandService {
             batch = uploadBatchRepository.save(batch);
         }
         
-        // Create Photo record
+        // Generate S3 key BEFORE saving photo (s3_key is NOT NULL)
+        String s3Key = userId + "/" + System.currentTimeMillis() + "_" + UUID.randomUUID() + "_" + request.getFilename();
+        
+        // Create Photo record with S3 key set
         Photo photo = new Photo();
         photo.setUser(user);
         photo.setBatch(batch);
         photo.setOriginalFilename(request.getFilename());
         photo.setFileSizeBytes(request.getFileSizeBytes());
+        photo.setS3Key(s3Key);
         photo.setStatus(PhotoStatus.PENDING);
         photo = photoRepository.save(photo);
         
-        // Generate S3 key and presigned URL
-        String s3Key = userId + "/" + System.currentTimeMillis() + "_" + UUID.randomUUID() + "_" + request.getFilename();
-        photo.setS3Key(s3Key);
-        photoRepository.save(photo);
-        
+        // Generate presigned URL
         String presignedUrl = s3Service.generatePresignedPutUrl(userId, s3Key);
         
         return new InitiateUploadResponse(

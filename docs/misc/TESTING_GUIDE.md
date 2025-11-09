@@ -128,22 +128,20 @@ curl http://localhost:8080/api/photos
 ### 1. Initiate Upload (Get Presigned URL)
 
 ```bash
-curl -X POST http://localhost:8080/api/upload/initiate \
+# All-in-one: Fetch and export PHOTO_ID, BATCH_ID, UPLOAD_URL
+RESPONSE=$(curl -s -X POST http://localhost:8080/api/upload/initiate \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-    "filename": "test-photo.jpg",
-    "fileSizeBytes": 102400,
-    "contentType": "image/jpeg"
-  }' | jq .
-
-# Save for next steps:
-export PHOTO_ID="<photoId-from-response>"
-export BATCH_ID="<batchId-from-response>"
-export UPLOAD_URL="<uploadUrl-from-response>"
+  -d '{"filename":"test-photo.jpg","fileSizeBytes":102400,"contentType":"image/jpeg"}') && \
+export PHOTO_ID=$(echo $RESPONSE | jq -r '.photoId') && \
+export BATCH_ID=$(echo $RESPONSE | jq -r '.batchId') && \
+export UPLOAD_URL=$(echo $RESPONSE | jq -r '.uploadUrl') && \
+echo "✅ PHOTO_ID: $PHOTO_ID" && \
+echo "✅ BATCH_ID: $BATCH_ID" && \
+echo "✅ UPLOAD_URL: $UPLOAD_URL"
 ```
 
-**Expected**: 200 OK with presigned PUT URL
+**Expected**: 200 OK with presigned PUT URL and all 3 variables exported
 
 ### 2. Upload File to S3
 
