@@ -34,13 +34,7 @@ const FormInput: React.FC<FormInputProps> = ({
     <div>
       <label 
         htmlFor={label} 
-        style={{ 
-          display: 'block',
-          fontSize: '14px',
-          fontWeight: '600',
-          color: '#4a5568',
-          marginBottom: '8px'
-        }}
+        className="block text-sm font-semibold text-gray-700 mb-2"
       >
         {label}
       </label>
@@ -52,29 +46,10 @@ const FormInput: React.FC<FormInputProps> = ({
         disabled={disabled}
         placeholder={placeholder}
         autoComplete={autoComplete}
-        style={{
-          width: '100%',
-          padding: '12px 16px',
-          fontSize: '15px',
-          border: '2px solid #e2e8f0',
-          borderRadius: '10px',
-          backgroundColor: disabled ? '#f7fafc' : '#ffffff',
-          color: '#2d3748',
-          outline: 'none',
-          transition: 'all 0.2s ease',
-          cursor: disabled ? 'not-allowed' : 'text'
-        }}
-        onFocus={(e) => {
-          e.target.style.borderColor = '#667eea';
-          e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
-        }}
-        onBlur={(e) => {
-          e.target.style.borderColor = '#e2e8f0';
-          e.target.style.boxShadow = 'none';
-        }}
+        className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 disabled:bg-gray-50 disabled:cursor-not-allowed outline-none transition-all duration-200"
       />
       {error && (
-        <p style={{ color: '#e53e3e', fontSize: '12px', marginTop: '6px' }}>
+        <p className="text-red-600 text-xs mt-2">
           {error}
         </p>
       )}

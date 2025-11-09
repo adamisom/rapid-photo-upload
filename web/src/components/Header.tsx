@@ -38,7 +38,7 @@ export default function Header() {
               </svg>
             </div>
             <div>
-              <p className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">RapidPhoto</p>
+              <p className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">RapidPhotoUpload</p>
               <p className="text-xs text-gray-500">Upload Done Right</p>
             </div>
           </Link>

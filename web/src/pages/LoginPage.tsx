@@ -59,55 +59,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div 
-      className="flex items-center justify-center p-4"
-      style={{ 
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-      }}
-    >
-      <div 
-        style={{ 
-          width: '100%', 
-          maxWidth: '440px',
-          backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          padding: '48px 40px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-        }}
-      >
+    <div className="min-h-screen bg-gradient-to-br from-purple-500 via-purple-600 to-purple-800 flex items-center justify-center p-6">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl px-10 py-12">
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h1 style={{ 
-            fontSize: '32px', 
-            fontWeight: '700', 
-            color: '#1a202c',
-            marginBottom: '8px',
-            letterSpacing: '-0.5px'
-          }}>
-            RapidPhoto
+        <div className="text-center mb-10">
+          <h1 className="text-5xl font-bold text-gray-900 mb-3 tracking-tight">
+            RapidPhotoUpload
           </h1>
-          <p style={{ fontSize: '15px', color: '#718096' }}>
+          <p className="text-gray-600 text-lg">
             Sign in to your account
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div style={{
-            backgroundColor: '#fee',
-            border: '1px solid #fcc',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '24px',
-            color: '#c53030'
-          }}>
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6 text-red-700">
             {error}
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleSubmit} className="space-y-5">
           <FormInput
             label="Email Address"
             type="email"
@@ -132,46 +104,25 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            style={{
-              width: '100%',
-              backgroundColor: isLoading ? '#cbd5e0' : '#667eea',
-              color: '#ffffff',
-              fontWeight: '600',
-              fontSize: '16px',
-              padding: '14px',
-              borderRadius: '10px',
-              border: 'none',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              marginTop: '8px',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
-            }}
-            onMouseOver={(e) => !isLoading && (e.currentTarget.style.backgroundColor = '#5568d3')}
-            onMouseOut={(e) => !isLoading && (e.currentTarget.style.backgroundColor = '#667eea')}
+            className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold text-lg py-3 rounded-xl transition-all duration-200 disabled:cursor-not-allowed shadow-lg shadow-purple-500/50 mt-6"
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         {/* Divider */}
-        <div style={{ margin: '32px 0', display: 'flex', alignItems: 'center' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }}></div>
-          <div style={{ padding: '0 16px', fontSize: '14px', color: '#a0aec0' }}>or</div>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }}></div>
+        <div className="flex items-center my-8">
+          <div className="flex-1 border-t border-gray-300"></div>
+          <div className="px-5 text-sm text-gray-500">or</div>
+          <div className="flex-1 border-t border-gray-300"></div>
         </div>
 
         {/* Register Link */}
-        <p style={{ textAlign: 'center', fontSize: '14px', color: '#718096' }}>
+        <p className="text-center text-base text-gray-600">
           Don't have an account?{' '}
           <Link 
             to="/register" 
-            style={{ 
-              color: '#667eea', 
-              fontWeight: '600',
-              textDecoration: 'none'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.color = '#5568d3'}
-            onMouseOut={(e) => e.currentTarget.style.color = '#667eea'}
+            className="text-purple-600 hover:text-purple-700 font-semibold no-underline"
           >
             Sign up
           </Link>
