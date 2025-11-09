@@ -1,4 +1,4 @@
-# Testing RapidPhotoUpload Mobile with Expo Go
+# Phase 6: Testing RapidPhotoUpload Mobile with Expo Go
 
 Quick guide to test the React Native app on your iPhone using Expo Go.
 
@@ -114,7 +114,7 @@ Same as Method 1 - works even without local WiFi
 
 ### "Cannot reach backend"
 - Ensure backend is running: `http://localhost:8080/actuator/health`
-- Check `VITE_API_BASE_URL` in mobile `.env` (use your Mac's IP, not localhost)
+- Check `EXPO_PUBLIC_API_BASE_URL` in mobile `.env` (use your Mac's IP, not localhost)
 
 ---
 
@@ -138,13 +138,7 @@ Then sideload onto device using Xcode or TestFlight.
 
 ## Environment Variables
 
-Create `.env` in `mobile/` directory:
-
-```env
-VITE_API_BASE_URL=http://192.168.1.X:8080
-```
-
-Replace `192.168.1.X` with your Mac's IP address (get with `ifconfig`).
+See `PHASE_6_ENV_SETUP.md` for detailed environment configuration.
 
 ---
 
