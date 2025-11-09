@@ -46,20 +46,19 @@ public class UploadCommandService {
                     UploadBatch newBatch = new UploadBatch();
                     newBatch.setId(request.getBatchId()); // Use client-provided ID
                     newBatch.setUser(user);
-                    newBatch.setTotalCount(0); // Will be incremented
+                    newBatch.setTotalCount(0); // Will be incremented atomically
                     return uploadBatchRepository.save(newBatch);
                 });
         } else {
             // No batchId provided - create new batch with auto-generated ID
             batch = new UploadBatch();
             batch.setUser(user);
-            batch.setTotalCount(0); // Will be incremented
+            batch.setTotalCount(0); // Will be incremented atomically
             batch = uploadBatchRepository.save(batch);
         }
         
-        // Increment total count for this batch
-        batch.setTotalCount(batch.getTotalCount() + 1);
-        batch = uploadBatchRepository.save(batch);
+        // Atomically increment total count using database-level update
+        uploadBatchRepository.incrementTotalCount(batch.getId());
         
         // Generate S3 key BEFORE saving photo (s3_key is NOT NULL)
         String s3Key = userId + "/" + System.currentTimeMillis() + "_" + UUID.randomUUID() + "_" + request.getFilename();

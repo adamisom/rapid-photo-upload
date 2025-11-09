@@ -86,8 +86,9 @@ class UploadCommandServiceTest {
         assertNotNull(response.getUploadUrl());
         assertEquals("batch-123", response.getBatchId());
         
-        // Now called twice: once to create, once to increment totalCount
-        verify(uploadBatchRepository, times(2)).save(any(UploadBatch.class));
+        // Now called once to create, then atomic increment
+        verify(uploadBatchRepository).save(any(UploadBatch.class));
+        verify(uploadBatchRepository).incrementTotalCount(anyString());
         verify(photoRepository).save(any(Photo.class));
     }
 
@@ -97,7 +98,6 @@ class UploadCommandServiceTest {
         
         when(userRepository.findById("user-123")).thenReturn(Optional.of(testUser));
         when(uploadBatchRepository.findByIdAndUserId("batch-123", "user-123")).thenReturn(Optional.of(testBatch));
-        when(uploadBatchRepository.save(any(UploadBatch.class))).thenReturn(testBatch); // Mock the save for incrementing totalCount
         when(photoRepository.save(any(Photo.class))).thenReturn(testPhoto);
         when(s3Service.generatePresignedPutUrl(anyString(), anyString())).thenReturn("https://s3.url");
 
@@ -106,9 +106,10 @@ class UploadCommandServiceTest {
         assertNotNull(response);
         assertEquals("batch-123", response.getBatchId());
         
-        // Verify batch was retrieved and then saved to increment totalCount
+        // Verify batch was retrieved and then atomically incremented
         verify(uploadBatchRepository).findByIdAndUserId("batch-123", "user-123");
-        verify(uploadBatchRepository).save(any(UploadBatch.class)); // Called once to increment count
+        verify(uploadBatchRepository).incrementTotalCount("batch-123");
+        verify(uploadBatchRepository, never()).save(any(UploadBatch.class));
     }
 
     @Test
@@ -146,9 +147,10 @@ class UploadCommandServiceTest {
         assertNotNull(response);
         assertEquals("batch-123", response.getBatchId());
         
-        // Verify batch was created with client-provided ID, then incremented
+        // Verify batch was created with client-provided ID, then atomically incremented
         verify(uploadBatchRepository).findByIdAndUserId("client-batch-456", "user-123");
-        verify(uploadBatchRepository, times(2)).save(any(UploadBatch.class));
+        verify(uploadBatchRepository).save(any(UploadBatch.class));
+        verify(uploadBatchRepository).incrementTotalCount(anyString());
     }
 
     @Test
