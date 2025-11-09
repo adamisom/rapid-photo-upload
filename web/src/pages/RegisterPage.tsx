@@ -8,24 +8,24 @@
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import FormInput from '../components/FormInput';
-import Alert from '../components/Alert';
 import { validators } from '../utils/validators';
+import { authService } from '../services/authService';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register, isLoading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
+    setError(null);
+    setInfo(null);
 
     // Validation
     const emailError = validators.validateEmail(email);
@@ -46,8 +46,10 @@ export default function RegisterPage() {
       return;
     }
 
+    setIsLoading(true);
     try {
-      await register(email, password);
+      const response = await authService.register(email, password);
+      authService.setAuthToken(response.token, response.userId, response.email);
       navigate('/upload');
     } catch (err: any) {
       let message = 'Registration failed. Please try again.';
@@ -64,20 +66,15 @@ export default function RegisterPage() {
       // Check for specific cases
       if (message.includes('Email already exists') || message.includes('already exists')) {
         setInfo('This email is already registered. Please login instead.');
-        return;
-      }
-      
-      if (message.includes('Failed to fetch') || message.includes('Network') || err.code === 'ERR_NETWORK') {
+      } else if (message.includes('Failed to fetch') || message.includes('Network') || err.code === 'ERR_NETWORK') {
         setError('Cannot connect to server. Is the backend running on http://localhost:8080?');
-        return;
-      } 
-      
-      if (err.response?.status === 400) {
+      } else if (err.response?.status === 400) {
         setError(message || 'Invalid email or password. Password must be at least 8 characters.');
-        return;
+      } else {
+        setError(message);
       }
-      
-      setError(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 

@@ -23,7 +23,6 @@ import { AuthContext } from './auth';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Initialize auth state from localStorage on mount
   useEffect(() => {
@@ -35,39 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(storedToken);
       setUser({ id: storedUserId, email: storedEmail });
     }
-
-    setIsLoading(false);
   }, []);
-
-  const register = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const response = await authService.register(email, password);
-      authService.setAuthToken(response.token, response.userId, response.email);
-      setToken(response.token);
-      setUser({ id: response.userId, email: response.email });
-    } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const response = await authService.login(email, password);
-      authService.setAuthToken(response.token, response.userId, response.email);
-      setToken(response.token);
-      setUser({ id: response.userId, email: response.email });
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const logout = () => {
     authService.clearAuthToken();
@@ -78,10 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextType = {
     user,
     token,
-    isLoading,
     isAuthenticated: !!token,
-    register,
-    login,
     logout,
   };
 

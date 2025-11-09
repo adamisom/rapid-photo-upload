@@ -8,17 +8,16 @@
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import FormInput from '../components/FormInput';
-import Alert from '../components/Alert';
 import { validators } from '../utils/validators';
+import { authService } from '../services/authService';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,23 +37,28 @@ export default function LoginPage() {
       return;
     }
 
+    setIsLoading(true);
     try {
-      await login(email, password);
+      const response = await authService.login(email, password);
+      authService.setAuthToken(response.token, response.userId, response.email);
       navigate('/upload');
-    } catch (err) {
-      console.error('Login error:', err);
+    } catch (err: any) {
       let message = 'Login failed. Please check your credentials.';
       
-      if (err instanceof Error) {
+      if (err.response?.data?.message) {
+        message = err.response.data.message;
+      } else if (err.message) {
         message = err.message;
       }
       
       // Check for network errors
-      if (message.includes('Failed to fetch') || message.includes('Network')) {
+      if (message.includes('Failed to fetch') || message.includes('Network') || err.code === 'ERR_NETWORK') {
         message = 'Cannot connect to server. Is the backend running on http://localhost:8080?';
       }
       
       setError(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
