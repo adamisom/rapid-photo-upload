@@ -23,6 +23,7 @@ import { AuthContext } from './auth';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize auth state from localStorage on mount
   useEffect(() => {
@@ -34,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(storedToken);
       setUser({ id: storedUserId, email: storedEmail });
     }
+    setIsInitialized(true);
   }, []);
 
   // Refresh auth state from localStorage (called after login/register)
@@ -58,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     token,
     isAuthenticated: !!token,
+    isInitialized,
     logout,
     refreshAuth,
   };

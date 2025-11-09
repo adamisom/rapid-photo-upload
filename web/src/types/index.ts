@@ -44,6 +44,7 @@ export interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   logout: () => void;
   refreshAuth: () => void;
 }
