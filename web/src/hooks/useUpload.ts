@@ -167,28 +167,32 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     } finally {
       setIsUploading(false);
 
-      // Move current batch to lastBatch
-      if (lastBatch) {
-        // Move previous lastBatch to previousBatches
-        setPreviousBatches((prev) => [lastBatch, ...prev]);
-      }
-      
-      // Create new lastBatch from completed files
-      const completedFiles = files.filter((f) => 
-        (f.status === 'completed' || f.status === 'failed') && 
-        pendingFiles.some((pf) => pf.id === f.id)
-      );
-      
-      if (completedFiles.length > 0) {
-        setLastBatch({
-          id: newBatchId,
-          files: completedFiles,
-          completedAt: new Date(),
-        });
-      }
+      // Capture completed files BEFORE we remove them from state
+      setFiles((currentFiles) => {
+        // Find all files from this batch that completed or failed
+        const completedFilesFromBatch = currentFiles.filter((f) => 
+          (f.status === 'completed' || f.status === 'failed') && 
+          pendingFiles.some((pf) => pf.id === f.id)
+        );
+        
+        // Move current batch to lastBatch
+        if (completedFilesFromBatch.length > 0) {
+          // Move previous lastBatch to previousBatches if it exists
+          if (lastBatch) {
+            setPreviousBatches((prev) => [lastBatch, ...prev]);
+          }
+          
+          // Create new lastBatch from completed files
+          setLastBatch({
+            id: newBatchId,
+            files: completedFilesFromBatch,
+            completedAt: new Date(),
+          });
+        }
 
-      // Remove completed files from active files list
-      setFiles((prev) => prev.filter((f) => f.status === 'pending' || f.status === 'uploading'));
+        // Remove completed files from active files list and return new state
+        return currentFiles.filter((f) => f.status === 'pending' || f.status === 'uploading');
+      });
 
       // Calculate total progress for pending files only
       const completedCount = pendingFiles.filter((f) => f.status === 'completed').length;
