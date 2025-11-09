@@ -28,6 +28,7 @@ interface UploadManager {
   error: string | null;
   addFiles: (newFiles: File[]) => void;
   removeFile: (fileId: string) => void;
+  clearCompleted: () => void;
   startUpload: () => Promise<void>;
   cancelUpload: () => void;
   reset: () => void;
@@ -55,6 +56,11 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
   }, []);
 
+  const clearCompleted = useCallback(() => {
+    setFiles((prev) => prev.filter((f) => f.status !== 'completed' && f.status !== 'failed'));
+    setTotalProgress(0);
+  }, []);
+
   const updateFileProgress = useCallback((fileId: string, progress: number) => {
     setFiles((prev) =>
       prev.map((f) => (f.id === fileId ? { ...f, progress } : f))
@@ -75,8 +81,11 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
   );
 
   const startUpload = useCallback(async () => {
-    if (files.length === 0) {
-      setError('No files selected');
+    // Only upload pending files
+    const pendingFiles = files.filter((f) => f.status === 'pending');
+    
+    if (pendingFiles.length === 0) {
+      setError('No files to upload');
       return;
     }
 
@@ -89,7 +98,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
 
     try {
       // Upload files with concurrency control
-      const uploadQueue = [...files];
+      const uploadQueue = [...pendingFiles];
       const activeUploads = new Set<string>();
 
       for (const file of uploadQueue) {
@@ -144,9 +153,9 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     } finally {
       setIsUploading(false);
 
-      // Calculate total progress
-      const completedCount = files.filter((f) => f.status === 'completed').length;
-      setTotalProgress((completedCount / files.length) * 100);
+      // Calculate total progress for pending files only
+      const completedCount = pendingFiles.filter((f) => f.status === 'completed').length;
+      setTotalProgress((completedCount / pendingFiles.length) * 100);
     }
   }, [files, maxConcurrent, updateFileProgress, updateFileStatus]);
 
@@ -171,6 +180,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     error,
     addFiles,
     removeFile,
+    clearCompleted,
     startUpload,
     cancelUpload,
     reset,
