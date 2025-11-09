@@ -111,12 +111,22 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
             updateFileStatus(file.id, 'uploading');
 
             // Step 1: Get presigned URL
+            // Only pass batchId if it already exists (after first file)
+            // On first file (i === 0), let backend create the batch
+            const batchIdToUse = i === 0 ? undefined : currentBatchId;
+            
             const initiateResponse = await uploadService.initiateUpload(
               file.file.name,
               file.file.size,
               file.file.type || 'application/octet-stream',
-              currentBatchId
+              batchIdToUse
             );
+            
+            // After first file, update batchId with the one from backend
+            if (i === 0 && initiateResponse.batchId && !currentBatchId) {
+              currentBatchId = initiateResponse.batchId;
+              setBatchId(currentBatchId);
+            }
 
             // Step 2: Upload to S3
             await uploadService.uploadToS3(
