@@ -21,16 +21,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContextProvider';
 import { useAuth } from './hooks/useAuth';
 
-// Pages (to be created)
-// import LoginPage from './pages/LoginPage';
-// import RegisterPage from './pages/RegisterPage';
-// import UploadPage from './pages/UploadPage';
-// import GalleryPage from './pages/GalleryPage';
-// import NotFoundPage from './pages/NotFoundPage';
+// Pages
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 
-// Components (to be created)
-// import ProtectedRoute from './components/ProtectedRoute';
-// import Header from './components/Header';
+// Components
+import ProtectedRoute from './components/ProtectedRoute';
+import Header from './components/Header';
 
 /**
  * Main app routes
@@ -53,25 +50,54 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Routes */}
-      {!isAuthenticated && (
-        <>
-          <Route path="/login" element={<div>Login Page (to be created)</div>} />
-          <Route path="/register" element={<div>Register Page (to be created)</div>} />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-        </>
-      )}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
       {/* Protected Routes */}
-      {isAuthenticated && (
-        <>
-          <Route path="/upload" element={<div>Upload Page (to be created)</div>} />
-          <Route path="/gallery" element={<div>Gallery Page (to be created)</div>} />
-          <Route path="/" element={<Navigate to="/upload" replace />} />
-        </>
-      )}
+      <Route
+        path="/upload"
+        element={
+          <ProtectedRoute>
+            <Header />
+            <div className="p-8 text-center text-gray-600">
+              <p className="text-lg">Upload Page (Phase 4.2)</p>
+            </div>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/gallery"
+        element={
+          <ProtectedRoute>
+            <Header />
+            <div className="p-8 text-center text-gray-600">
+              <p className="text-lg">Gallery Page (Phase 5)</p>
+            </div>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Root Redirect */}
+      <Route path="/" element={isAuthenticated ? <Navigate to="/upload" replace /> : <Navigate to="/login" replace />} />
 
       {/* Fallback */}
-      <Route path="*" element={<div>404 Not Found</div>} />
+      <Route
+        path="*"
+        element={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
+              <p className="text-gray-600 mb-8">Page not found</p>
+              <button
+                onClick={() => (window.location.href = '/')}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              >
+                Go Home
+              </button>
+            </div>
+          </div>
+        }
+      />
     </Routes>
   );
 };
