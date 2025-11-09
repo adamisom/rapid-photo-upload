@@ -3,14 +3,12 @@
  * LOGIN PAGE
  * ============================================================================
  * 
- * User login form with email/password authentication
+ * Authentication page for existing users to sign in with email + password
  */
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { validateLoginForm } from '../utils/validators';
-import type { ValidationError } from '../utils/validators';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -18,56 +16,56 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<ValidationError[]>([]);
-  const [apiError, setApiError] = useState<string>('');
-
-  const getFieldError = (field: string): string | undefined => {
-    return errors.find((e) => e.field === field)?.message;
-  };
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors([]);
-    setApiError('');
+    setError(null);
 
-    // Validate
-    const validationErrors = validateLoginForm(email, password);
-    if (validationErrors.length > 0) {
-      setErrors(validationErrors);
+    // Validation
+    if (!email.trim()) {
+      setError('Email is required');
+      return;
+    }
+    if (!password.trim()) {
+      setError('Password is required');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
     try {
       await login(email, password);
-      // useAuth context handles redirect after login
       navigate('/upload');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Login failed. Please try again.';
-      setApiError(message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
+      setError(message);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-xl p-8">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your RapidPhotoUpload account</p>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">RapidPhoto</h1>
+          <p className="text-gray-600">Sign in to your account</p>
         </div>
 
-        {/* API Error Alert */}
-        {apiError && (
+        {/* Error Message */}
+        {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-700">{apiError}</p>
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email Field */}
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email Address
             </label>
             <input
@@ -75,22 +73,15 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
               disabled={isLoading}
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
-                getFieldError('email')
-                  ? 'border-red-500 bg-red-50'
-                  : 'border-gray-300 bg-gray-50'
-              } disabled:opacity-50`}
+              placeholder="you@example.com"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
-            {getFieldError('email') && (
-              <p className="mt-1 text-sm text-red-600">{getFieldError('email')}</p>
-            )}
           </div>
 
-          {/* Password Field */}
+          {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
             <input
@@ -98,55 +89,37 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
               disabled={isLoading}
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
-                getFieldError('password')
-                  ? 'border-red-500 bg-red-50'
-                  : 'border-gray-300 bg-gray-50'
-              } disabled:opacity-50`}
+              placeholder="••••••••"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
-            {getFieldError('password') && (
-              <p className="mt-1 text-sm text-red-600">{getFieldError('password')}</p>
-            )}
           </div>
 
           {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 rounded-lg transition duration-200 flex items-center justify-center"
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
           >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Signing in...
-              </>
-            ) : (
-              'Sign In'
-            )}
+            {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         {/* Divider */}
-        <div className="my-6 relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Don't have an account?</span>
-          </div>
+        <div className="my-6 flex items-center">
+          <div className="flex-1 border-t border-gray-300"></div>
+          <div className="px-3 text-sm text-gray-600">or</div>
+          <div className="flex-1 border-t border-gray-300"></div>
         </div>
 
         {/* Register Link */}
-        <Link
-          to="/register"
-          className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold py-3 rounded-lg text-center transition duration-200"
-        >
-          Create Account
-        </Link>
+        <p className="text-center text-gray-600 text-sm">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   );
 }
-

@@ -20,14 +20,27 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContextProvider';
 import { useAuth } from './hooks/useAuth';
+import Header from './components/Header';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 
-// Components
-import ProtectedRoute from './components/ProtectedRoute';
-import Header from './components/Header';
+// Placeholder pages (to be created in later phases)
+const UploadPage = () => <div className="p-8">Upload Page (Phase 4.2)</div>;
+const GalleryPage = () => <div className="p-8">Gallery Page (Phase 5)</div>;
+const NotFoundPage = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
+      <p className="text-xl text-gray-600 mb-8">Page not found</p>
+      <a href="/" className="text-blue-600 hover:text-blue-700 font-semibold">
+        Go home
+      </a>
+    </div>
+  </div>
+);
 
 /**
  * Main app routes
@@ -48,57 +61,42 @@ const AppRoutes = () => {
   }
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-
-      {/* Protected Routes */}
-      <Route
-        path="/upload"
-        element={
-          <ProtectedRoute>
-            <Header />
-            <div className="p-8 text-center text-gray-600">
-              <p className="text-lg">Upload Page (Phase 4.2)</p>
-            </div>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/gallery"
-        element={
-          <ProtectedRoute>
-            <Header />
-            <div className="p-8 text-center text-gray-600">
-              <p className="text-lg">Gallery Page (Phase 5)</p>
-            </div>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Root Redirect */}
-      <Route path="/" element={isAuthenticated ? <Navigate to="/upload" replace /> : <Navigate to="/login" replace />} />
-
-      {/* Fallback */}
-      <Route
-        path="*"
-        element={
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-              <p className="text-gray-600 mb-8">Page not found</p>
-              <button
-                onClick={() => (window.location.href = '/')}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-              >
-                Go Home
-              </button>
-            </div>
-          </div>
-        }
-      />
-    </Routes>
+    <>
+      <Header />
+      <Routes>
+        {/* Public Routes */}
+        {!isAuthenticated ? (
+          <>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </>
+        ) : (
+          <>
+            {/* Protected Routes */}
+            <Route
+              path="/upload"
+              element={
+                <ProtectedRoute>
+                  <UploadPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gallery"
+              element={
+                <ProtectedRoute>
+                  <GalleryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<Navigate to="/upload" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </>
+        )}
+      </Routes>
+    </>
   );
 };
 
@@ -111,10 +109,6 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-gray-50">
-          {/* Header (to be created) */}
-          {/* <Header /> */}
-
-          {/* Main content */}
           <AppRoutes />
         </div>
       </Router>

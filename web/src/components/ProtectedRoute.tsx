@@ -1,18 +1,17 @@
 /**
  * ============================================================================
- * PROTECTED ROUTE
+ * PROTECTED ROUTE COMPONENT
  * ============================================================================
  * 
- * Route wrapper that requires authentication
- * Redirects to /login if user is not authenticated
+ * Route wrapper that ensures user is authenticated
+ * Redirects to /login if not authenticated
  */
 
-import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 interface ProtectedRouteProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
@@ -20,7 +19,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
@@ -35,4 +34,3 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   return <>{children}</>;
 }
-
