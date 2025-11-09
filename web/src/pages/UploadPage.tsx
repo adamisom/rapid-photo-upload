@@ -63,164 +63,182 @@ export default function UploadPage() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'text-green-600';
-      case 'failed':
-        return 'text-red-600';
-      case 'uploading':
-        return 'text-blue-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return '✓';
-      case 'failed':
-        return '✕';
-      case 'uploading':
-        return '⟳';
-      default:
-        return '◯';
-    }
-  };
-
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload Photos</h1>
-        <p className="text-gray-600">Select or drag and drop your photos to upload them</p>
-      </div>
-
-      {/* Drop Zone */}
-      <div
-        ref={dropZoneRef}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={handleClick}
-        className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:bg-gray-50 transition-colors mb-8"
-      >
-        <div className="flex flex-col items-center space-y-2">
-          <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          <div>
-            <p className="text-lg font-semibold text-gray-900">Drag and drop photos here</p>
-            <p className="text-sm text-gray-500 mt-1">or click to select files</p>
-          </div>
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Upload Photos</h1>
+          <p className="text-lg text-gray-600">Drag and drop your photos or click to browse</p>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-      </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
-
-      {/* File List & Progress */}
-      {files.length > 0 && (
-        <div className="space-y-6">
-          {/* Overall Progress */}
-          {isUploading && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <ProgressBar
-                progress={totalProgress}
-                label="Overall Progress"
-                size="lg"
-              />
-              <p className="text-sm text-gray-600 mt-3">
-                {files.filter((f) => f.status === 'completed').length} of {files.length} files uploaded
-              </p>
+        {/* Drop Zone */}
+        <div
+          ref={dropZoneRef}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handleClick}
+          className="border-2 border-dashed border-gray-300 rounded-2xl p-16 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 mb-8 bg-white shadow-sm"
+        >
+          <div className="flex flex-col items-center space-y-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
             </div>
-          )}
+            <div>
+              <p className="text-xl font-bold text-gray-900">Drag and drop photos here</p>
+              <p className="text-gray-500 mt-2">or <span className="text-blue-600 font-semibold">click to browse</span> your computer</p>
+              <p className="text-xs text-gray-400 mt-3">Supports JPG, PNG, GIF, WebP up to 100MB per file</p>
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+        </div>
 
-          {/* Upload Button */}
-          {!isUploading && (
-            <button
-              onClick={startUpload}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors"
-            >
-              Start Upload ({files.length} file{files.length !== 1 ? 's' : ''})
-            </button>
-          )}
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
+            <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
 
-          {/* File Items */}
-          <div className="space-y-3">
-            {files.map((file) => (
-              <div key={file.id} className="bg-white rounded-lg shadow p-4">
-                <div className="flex items-start space-x-4">
-                  {/* File Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className={`text-lg font-semibold ${getStatusColor(file.status)}`}>
-                        {getStatusIcon(file.status)}
-                      </span>
-                      <p className="font-medium text-gray-900 truncate">{file.file.name}</p>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-3">{formatFileSize(file.file.size)}</p>
-
-                    {/* Progress Bar */}
-                    {file.status === 'uploading' || file.progress > 0 ? (
-                      <ProgressBar progress={file.progress} size="sm" showPercentage={false} />
-                    ) : null}
-
-                    {/* Error Message */}
-                    {file.error && (
-                      <p className="text-sm text-red-600 mt-2">{file.error}</p>
-                    )}
-                  </div>
-
-                  {/* Status Text */}
-                  <div className="text-right">
-                    <p className={`text-sm font-medium ${getStatusColor(file.status)}`}>
-                      {file.status === 'completed'
-                        ? 'Done'
-                        : file.status === 'failed'
-                        ? 'Failed'
-                        : file.status === 'uploading'
-                        ? 'Uploading'
-                        : 'Waiting'}
+        {/* File List & Progress */}
+        {files.length > 0 && (
+          <div className="space-y-6">
+            {/* Overall Progress */}
+            {isUploading && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Overall Progress</p>
+                    <p className="text-lg font-bold text-gray-900 mt-1">
+                      {files.filter((f) => f.status === 'completed').length} of {files.length} files uploaded
                     </p>
                   </div>
-
-                  {/* Remove Button */}
-                  {!isUploading && (
-                    <button
-                      onClick={() => removeFile(file.id)}
-                      className="text-gray-400 hover:text-red-600 transition-colors"
-                      aria-label="Remove file"
-                    >
-                      ✕
-                    </button>
-                  )}
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-blue-600">{Math.round(totalProgress)}%</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {files.filter((f) => f.status === 'failed').length > 0 && 
+                        `${files.filter((f) => f.status === 'failed').length} failed`}
+                    </p>
+                  </div>
                 </div>
+                <ProgressBar
+                  progress={totalProgress}
+                  size="lg"
+                  showPercentage={false}
+                />
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* Empty State */}
-      {files.length === 0 && !error && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No files selected yet</p>
-        </div>
-      )}
+            {/* Upload Button */}
+            {!isUploading && (
+              <button
+                onClick={startUpload}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:from-blue-800 active:to-indigo-800 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span>Start Upload ({files.length} file{files.length !== 1 ? 's' : ''})</span>
+              </button>
+            )}
+
+            {/* File Items */}
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+              {files.map((file) => (
+                <div key={file.id} className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200 p-4">
+                  <div className="flex items-start space-x-3">
+                    {/* Thumbnail / Status Icon */}
+                    <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      {file.status === 'completed' && (
+                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      {file.status === 'failed' && (
+                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      {file.status === 'uploading' && (
+                        <svg className="w-5 h-5 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      )}
+                      {file.status === 'pending' && (
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* File Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-gray-900 truncate text-sm">{file.file.name}</p>
+                        <p className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                          file.status === 'completed' ? 'bg-green-100 text-green-700' :
+                          file.status === 'failed' ? 'bg-red-100 text-red-700' :
+                          file.status === 'uploading' ? 'bg-blue-100 text-blue-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {file.status === 'completed' ? 'Done' :
+                           file.status === 'failed' ? 'Failed' :
+                           file.status === 'uploading' ? 'Uploading' :
+                           'Waiting'}
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-2">{formatFileSize(file.file.size)}</p>
+
+                      {/* Progress Bar */}
+                      {(file.status === 'uploading' || file.progress > 0) && (
+                        <ProgressBar progress={file.progress} size="sm" showPercentage={true} />
+                      )}
+
+                      {/* Error Message */}
+                      {file.error && (
+                        <p className="text-xs text-red-600 mt-2">{file.error}</p>
+                      )}
+                    </div>
+
+                    {/* Remove Button */}
+                    {!isUploading && (
+                      <button
+                        onClick={() => removeFile(file.id)}
+                        className="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
+                        aria-label="Remove file"
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {files.length === 0 && !error && (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No files selected yet</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

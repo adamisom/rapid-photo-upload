@@ -12,10 +12,11 @@ export const validators = {
    * Validate email address
    */
   validateEmail: (email: string): string | null => {
-    if (!email.trim()) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
       return 'Email is required';
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       return 'Please enter a valid email address';
     }
     return null;
