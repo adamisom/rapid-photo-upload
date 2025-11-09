@@ -1,21 +1,21 @@
 /**
  * ============================================================================
- * UPLOAD SERVICE (Phase 4.2)
+ * UPLOAD SERVICE
  * ============================================================================
  * 
- * Upload-related API calls
+ * Upload-related API calls and S3 integration
  * 
  * Endpoints:
  * - POST /api/upload/initiate        - Get presigned URL
  * - POST /api/upload/complete/{id}   - Mark upload complete
  * - POST /api/upload/failed/{id}     - Mark upload failed
  * - GET  /api/upload/batch/{id}/status - Poll batch progress
- * 
- * To be implemented in Phase 4.2
  */
 
+import apiClient from './api';
 import type {
   InitiateUploadResponse,
+  UploadCompleteRequest,
   BatchStatusResponse,
 } from '../types';
 
@@ -34,9 +34,13 @@ export const uploadService = {
     contentType: string,
     batchId?: string
   ): Promise<InitiateUploadResponse> => {
-    // Phase 4.2 implementation
-    console.debug('uploadService.initiateUpload', { filename, fileSizeBytes, contentType, batchId });
-    throw new Error('uploadService.initiateUpload not yet implemented');
+    const response = await apiClient.post<InitiateUploadResponse>('/api/upload/initiate', {
+      filename,
+      fileSizeBytes,
+      contentType,
+      ...(batchId && { batchId }),
+    });
+    return response.data;
   },
 
   /**
@@ -50,9 +54,11 @@ export const uploadService = {
     fileSizeBytes: number,
     eTag?: string
   ): Promise<void> => {
-    // Phase 4.2 implementation
-    console.debug('uploadService.completeUpload', { photoId, fileSizeBytes, eTag });
-    throw new Error('uploadService.completeUpload not yet implemented');
+    const request: UploadCompleteRequest = {
+      fileSizeBytes,
+      ...(eTag && { eTag }),
+    };
+    await apiClient.post(`/api/upload/complete/${photoId}`, request);
   },
 
   /**
@@ -61,9 +67,9 @@ export const uploadService = {
    * @param errorMessage Error description
    */
   failUpload: async (photoId: string, errorMessage: string): Promise<void> => {
-    // Phase 4.2 implementation
-    console.debug('uploadService.failUpload', { photoId, errorMessage });
-    throw new Error('uploadService.failUpload not yet implemented');
+    await apiClient.post(`/api/upload/failed/${photoId}`, {
+      errorMessage,
+    });
   },
 
   /**
@@ -72,9 +78,10 @@ export const uploadService = {
    * @returns Batch progress with all photos and their statuses
    */
   getBatchStatus: async (batchId: string): Promise<BatchStatusResponse> => {
-    // Phase 4.2 implementation
-    console.debug('uploadService.getBatchStatus', { batchId });
-    throw new Error('uploadService.getBatchStatus not yet implemented');
+    const response = await apiClient.get<BatchStatusResponse>(
+      `/api/upload/batch/${batchId}/status`
+    );
+    return response.data;
   },
 
   /**
@@ -88,9 +95,42 @@ export const uploadService = {
     file: File,
     onProgress?: (progress: number) => void
   ): Promise<void> => {
-    // Phase 4.2 implementation
-    console.debug('uploadService.uploadToS3', { presignedUrl, file, onProgress });
-    throw new Error('uploadService.uploadToS3 not yet implemented');
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      // Track upload progress
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100);
+            onProgress(progress);
+          }
+        });
+      }
+
+      // Handle completion
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          resolve();
+        } else {
+          reject(new Error(`S3 upload failed: ${xhr.status}`));
+        }
+      });
+
+      // Handle errors
+      xhr.addEventListener('error', () => {
+        reject(new Error('Network error during S3 upload'));
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload aborted'));
+      });
+
+      // Start upload
+      xhr.open('PUT', presignedUrl);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.send(file);
+    });
   },
 };
 

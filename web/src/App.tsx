@@ -26,9 +26,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Pages
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import UploadPage from './pages/UploadPage';
 
 // Placeholder pages (to be created in later phases)
-const UploadPage = () => <div className="p-8">Upload Page (Phase 4.2)</div>;
 const GalleryPage = () => <div className="p-8">Gallery Page (Phase 5)</div>;
 const NotFoundPage = () => (
   <div className="min-h-screen flex items-center justify-center">
