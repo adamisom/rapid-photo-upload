@@ -2,6 +2,39 @@
 
 A production-ready, AI-assisted monorepo featuring concurrent multi-file uploads for web and mobile platforms.
 
+---
+
+## 📚 **Essential Documentation**
+
+### For Evaluators & Technical Review:
+
+#### 🎯 **[ARCHITECTURE_DETAILS.md](docs/misc/ARCHITECTURE_DETAILS.md)** - Architectural Patterns Deep-Dive
+Comprehensive explanation of DDD, CQRS, and Vertical Slice Architecture implementation.
+
+**Contains:**
+- Domain-Driven Design with rich entities (User, Photo, UploadBatch)
+- CQRS separation (Command vs Query services)
+- Vertical Slice Architecture (feature-based organization)
+- Concurrency handling with atomic operations
+- Metadata storage strategy
+- 5-minute evaluator quick reference
+
+#### 🚀 **[TECHNICAL_WRITEUP.md](docs/misc/TECHNICAL_WRITEUP.md)** - Design Decisions & System Design
+High-level technical decisions, trade-offs, and "why" behind the architecture.
+
+**Contains:**
+- Concurrency strategy (presigned URLs, atomic batch creation)
+- Asynchronous design (non-blocking I/O, HTTP polling)
+- Cloud storage integration (S3 flow, CORS, security, cost analysis)
+- Division of logic (Backend/Frontend/S3 responsibilities)
+- Visual diagrams (5-step upload flow, system architecture)
+- Load test results (100 photos × 2MB performance metrics)
+
+#### 📖 **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Complete System Architecture
+Full technical architecture guide with implementation details.
+
+---
+
 ## Project Structure
 
 ```

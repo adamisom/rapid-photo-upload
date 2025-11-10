@@ -4,6 +4,32 @@
 
 ---
 
+## 📚 **RECOMMENDED READING FOR EVALUATORS**
+
+Before diving into this comprehensive architecture guide, we strongly recommend reading these focused documents:
+
+### 🎯 **[ARCHITECTURE_DETAILS.md](misc/ARCHITECTURE_DETAILS.md)** - Architectural Patterns Explained
+**Read this for:** DDD, CQRS, and Vertical Slice Architecture deep-dive
+- **Domain-Driven Design (DDD)**: Rich domain entities (User, Photo, UploadBatch) with JavaDoc
+- **CQRS Pattern**: Command vs Query services separation explained
+- **Vertical Slice Architecture**: Feature-based organization (auth/, upload/, photos/)
+- **Bounded Contexts**: Independent feature domains
+- **Concurrency Handling**: Atomic operations with `ON CONFLICT DO NOTHING`
+- **Metadata Storage Strategy**: Why records persist indefinitely
+- **Frontend Architecture**: Context, Hooks, Services pattern
+- **5-Minute Quick Reference**: How to identify patterns in code
+
+### 🚀 **[TECHNICAL_WRITEUP.md](misc/TECHNICAL_WRITEUP.md)** - Design Decisions & Trade-offs
+**Read this for:** High-level system design and "why" behind decisions
+- **Concurrency Strategy**: Presigned URLs + atomic operations explained
+- **Asynchronous Design**: Non-blocking I/O, HTTP polling vs WebSockets
+- **Cloud Storage**: S3 integration, CORS, security, cost analysis
+- **Division of Logic**: Backend vs Frontend vs S3 responsibilities
+- **Visual Diagrams**: Upload flow (5 steps), system architecture
+- **Performance Results**: Load test metrics (100 photos × 2MB)
+
+---
+
 ## 1. System Architecture Overview
 
 ```
