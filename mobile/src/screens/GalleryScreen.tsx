@@ -165,7 +165,7 @@ export default function GalleryScreen() {
   }, [photos, tagInput]);
 
   const selectSuggestion = useCallback((photoId: string, suggestion: string) => {
-    setTagInput((prev) => ({ ...prev, [photoId]: suggestion }));
+    console.log('🏷️ Suggestion selected:', suggestion, 'for photo:', photoId);
     setShowSuggestions((prev) => ({ ...prev, [photoId]: false }));
     void handleAddTag(photoId, suggestion);
   }, [handleAddTag]);
@@ -283,17 +283,17 @@ export default function GalleryScreen() {
                               setShowSuggestions((prev) => ({ ...prev, [item.id]: true }));
                             }
                           }}
-                          onBlur={() => {
-                            // Delay to allow suggestion click
-                            setTimeout(() => {
-                              setShowSuggestions((prev) => ({ ...prev, [item.id]: false }));
-                            }, 200);
+                          onSubmitEditing={() => {
+                            handleAddTag(item.id);
+                            setShowSuggestions((prev) => ({ ...prev, [item.id]: false }));
                           }}
-                          onSubmitEditing={() => handleAddTag(item.id)}
                         />
                         <TouchableOpacity
                           style={styles.tagAddButton}
-                          onPress={() => handleAddTag(item.id)}
+                          onPress={() => {
+                            handleAddTag(item.id);
+                            setShowSuggestions((prev) => ({ ...prev, [item.id]: false }));
+                          }}
                         >
                           <Text style={styles.tagAddButtonText}>+</Text>
                         </TouchableOpacity>
@@ -306,6 +306,8 @@ export default function GalleryScreen() {
                             <TouchableOpacity
                               key={idx}
                               onPress={() => selectSuggestion(item.id, suggestion)}
+                              onPressIn={() => selectSuggestion(item.id, suggestion)}
+                              activeOpacity={0.7}
                               style={styles.suggestionItem}
                             >
                               <Text style={styles.suggestionText}>{suggestion}</Text>
