@@ -137,8 +137,10 @@ class UploadCommandServiceTest {
         InitiateUploadRequest request = new InitiateUploadRequest("test.jpg", 1024L, "image/jpeg", "client-batch-456");
         
         when(userRepository.findById("user-123")).thenReturn(Optional.of(testUser));
-        when(uploadBatchRepository.findByIdAndUserId("client-batch-456", "user-123")).thenReturn(Optional.empty());
-        when(uploadBatchRepository.saveAndFlush(any(UploadBatch.class))).thenReturn(testBatch);
+        // Mock the atomic insert operation (returns 1 row affected)
+        when(uploadBatchRepository.insertBatchIfNotExists("client-batch-456", "user-123")).thenReturn(1);
+        // After insert, batch should be found
+        when(uploadBatchRepository.findByIdAndUserId("client-batch-456", "user-123")).thenReturn(Optional.of(testBatch));
         when(photoRepository.save(any(Photo.class))).thenReturn(testPhoto);
         when(s3Service.generatePresignedPutUrl(anyString(), anyString())).thenReturn("https://s3.url");
 
@@ -147,9 +149,9 @@ class UploadCommandServiceTest {
         assertNotNull(response);
         assertEquals("batch-123", response.getBatchId());
         
-        // Verify batch was created with client-provided ID, then atomically incremented
+        // Verify atomic insert was called, then batch was fetched
+        verify(uploadBatchRepository).insertBatchIfNotExists("client-batch-456", "user-123");
         verify(uploadBatchRepository).findByIdAndUserId("client-batch-456", "user-123");
-        verify(uploadBatchRepository).saveAndFlush(any(UploadBatch.class));
         verify(uploadBatchRepository).incrementTotalCount(anyString());
     }
 
