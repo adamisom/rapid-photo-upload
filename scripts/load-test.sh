@@ -2,6 +2,25 @@
 # =============================================================================
 # RapidPhotoUpload - Load Test Script
 # =============================================================================
+# End-to-End Automated Upload Test
+#
+# This script performs a comprehensive test of the upload system:
+# 1. Registers a unique test user and obtains JWT token
+# 2. Generates N test images (default 100 × 2MB) using random data
+# 3. Requests presigned S3 URLs for all files via /api/upload/initiate
+#    (tracks timing to ensure <90 seconds for 100 files)
+# 4. Uploads files directly to S3 in parallel (10 concurrent) via presigned URLs
+# 5. Calls /api/upload/complete for each upload (backend verifies S3 existence)
+# 6. Queries batch status API to retrieve completion counts from database
+# 7. Displays comprehensive results: timing, speed, success/fail counts
+# 8. Determines pass/fail and outputs test user credentials for inspection
+# 9. Cleans up temporary test files
+#
+# Note: This script uses 10 concurrent uploads to stress-test the backend.
+#       The web UI uses 5 concurrent uploads for better client-side performance.
+#       Mobile concurrency will be determined in a future phase.
+#
+# =============================================================================
 # Tests: 100 × 2MB concurrent photo uploads
 # Validates: Backend handles high concurrency, S3 upload, database integrity
 #
