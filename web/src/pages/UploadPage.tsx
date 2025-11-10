@@ -9,6 +9,7 @@
 import { useRef } from 'react';
 import { useUpload, type UploadBatch } from '../hooks/useUpload';
 import ProgressBar from '../components/ProgressBar';
+import { formatFileSize, formatTimeRemaining } from '../utils/formatters';
 
 export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,24 +72,6 @@ export default function UploadPage() {
 
   const handleClick = () => {
     fileInputRef.current?.click();
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const formatTimeRemaining = (seconds: number) => {
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours}h ${remainingMinutes}m`;
   };
 
   // Helper to render a batch section
