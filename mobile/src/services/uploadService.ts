@@ -8,12 +8,15 @@ export const uploadService = {
     mimeType: string,
     batchId?: string
   ): Promise<InitiateUploadResponse> => {
-    const response = await apiClient.post<InitiateUploadResponse>('/api/uploads/initiate', {
+    const payload = {
       filename,
-      fileSize,
-      mimeType,
+      fileSizeBytes: fileSize,
+      contentType: mimeType,
       ...(batchId && { batchId }),
-    });
+    };
+    console.log('📤 Initiating upload:', payload);
+    const response = await apiClient.post<InitiateUploadResponse>('/api/upload/initiate', payload);
+    console.log('✅ Initiate response:', response.data);
     return response.data;
   },
 
@@ -56,19 +59,19 @@ export const uploadService = {
   },
 
   completeUpload: async (photoId: string, fileSize: number): Promise<void> => {
-    await apiClient.post(`/api/uploads/complete/${photoId}`, {
+    await apiClient.post(`/api/upload/complete/${photoId}`, {
       fileSizeBytes: fileSize,
     });
   },
 
   failUpload: async (photoId: string, reason: string): Promise<void> => {
-    await apiClient.post(`/api/uploads/fail/${photoId}`, {
+    await apiClient.post(`/api/upload/fail/${photoId}`, {
       reason,
     });
   },
 
   getBatchStatus: async (batchId: string) => {
-    const response = await apiClient.get(`/api/uploads/batch/${batchId}`);
+    const response = await apiClient.get(`/api/upload/batch/${batchId}`);
     return response.data;
   },
 };

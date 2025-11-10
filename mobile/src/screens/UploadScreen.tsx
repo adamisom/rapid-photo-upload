@@ -36,18 +36,60 @@ export default function UploadScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultiple: true,
+        mediaTypes: 'images',
+        allowsMultipleSelection: true,
         quality: 0.8,
       });
 
       if (!result.canceled) {
         result.assets.forEach((asset) => {
+          // Extract filename from URI if not provided
+          let filename = asset.filename;
+          if (!filename && asset.uri) {
+            // Extract from URI: "file://.../ImagePicker/216B46A8.png" -> "216B46A8.png"
+            const uriParts = asset.uri.split('/');
+            const extractedFilename = uriParts[uriParts.length - 1];
+            
+            // If it's a UUID-style filename (long), truncate to first 8 chars + extension
+            const nameParts = extractedFilename.split('.');
+            const extension = nameParts.length > 1 ? `.${nameParts.pop()}` : '';
+            const baseName = nameParts.join('.');
+            
+            if (baseName.length > 8 && baseName.includes('-')) {
+              // Looks like a UUID, truncate
+              filename = baseName.substring(0, 8) + extension;
+            } else {
+              filename = extractedFilename;
+            }
+          }
+          if (!filename) {
+            filename = `photo_${Date.now()}.jpg`;
+          }
+          
+          console.log('📸 Selected photo:', {
+            uri: asset.uri,
+            originalFilename: asset.filename,
+            extractedFilename: filename,
+            type: asset.type,
+            fileSize: asset.fileSize,
+            width: asset.width,
+            height: asset.height,
+          });
+          
+          // Infer MIME type from filename extension
+          const extension = filename.toLowerCase().split('.').pop();
+          let mimeType = 'image/jpeg'; // default
+          if (extension === 'png') mimeType = 'image/png';
+          else if (extension === 'gif') mimeType = 'image/gif';
+          else if (extension === 'webp') mimeType = 'image/webp';
+          
+          console.log('📤 Adding file:', { filename, mimeType, size: asset.fileSize });
+          
           addFile({
             uri: asset.uri,
-            name: asset.filename || `photo_${Date.now()}.jpg`,
-            type: asset.type === 'image' ? 'image/jpeg' : 'image/png',
-            size: asset.fileSize || 0,
+            name: filename,
+            type: mimeType,
+            size: asset.fileSize || 1000000,
           });
         });
       }

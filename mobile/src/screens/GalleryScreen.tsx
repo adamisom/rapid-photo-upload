@@ -14,6 +14,7 @@ export default function GalleryScreen() {
   const [totalPhotos, setTotalPhotos] = useState(0);
   const [tagInput, setTagInput] = useState<{ [key: string]: string }>({});
   const [tagErrors, setTagErrors] = useState<{ [key: string]: string }>({});
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const pageSize = 20;
 
   const loadPhotos = useCallback(async () => {
@@ -56,12 +57,15 @@ export default function GalleryScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              setDeletingPhotoId(photoId); // Show loading overlay
               await photoService.deletePhoto(photoId);
               setPhotos((prev) => prev.filter((p) => p.id !== photoId));
               setTotalPhotos((prev) => prev - 1);
             } catch (err) {
               const message = err instanceof Error ? err.message : 'Failed to delete photo';
               Alert.alert('Error', message);
+            } finally {
+              setDeletingPhotoId(null); // Hide loading overlay
             }
           },
         },
@@ -188,6 +192,13 @@ export default function GalleryScreen() {
                     source={{ uri: item.downloadUrl }}
                     style={styles.photoImage}
                   />
+                  {/* Deleting overlay */}
+                  {deletingPhotoId === item.id && (
+                    <View style={styles.deletingOverlay}>
+                      <ActivityIndicator size="large" color="#fff" />
+                      <Text style={styles.deletingText}>Deleting...</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
                 <Text style={styles.photoName} numberOfLines={1}>
                   {item.originalFilename}
@@ -346,6 +357,22 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 150,
     backgroundColor: '#e0e0e0',
+  },
+  deletingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deletingText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 10,
   },
   photoName: {
     padding: 10,

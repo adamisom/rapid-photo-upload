@@ -159,7 +159,8 @@ export const useUpload = (maxConcurrent: number = 5) => {
     
     const uploadQueue = [...pendingFiles];
     const activeUploads = new Set<string>();
-    let localBatchId = currentBatchId || uuidv4();
+    // Always generate a new batch ID for each upload session
+    let localBatchId = uuidv4();
     setCurrentBatchId(localBatchId);
 
     try {
@@ -197,10 +198,14 @@ export const useUpload = (maxConcurrent: number = 5) => {
             await uploadService.completeUpload(initiateResponse.photoId, file.file.size);
 
             updateFileStatus(file.id, 'completed');
-          } catch (err) {
+          } catch (err: any) {
             const errorMessage = err instanceof Error ? err.message : 'Upload failed';
             updateFileStatus(file.id, 'failed', errorMessage);
-            console.error(`Upload failed for ${file.file.name}:`, err);
+            console.error(`❌ Upload failed for ${file.file.name}:`, {
+              message: err.message,
+              response: err.response?.data,
+              status: err.response?.status,
+            });
           } finally {
             activeUploads.delete(file.id);
           }
@@ -215,14 +220,22 @@ export const useUpload = (maxConcurrent: number = 5) => {
       setIsUploading(false);
       setUploadStartTime(null);
       
+      console.log('📦 Moving to batch history...');
+      console.log('   Pending files:', pendingFiles.map(f => ({ id: f.id, name: f.file.name })));
+      
       // Move completed files to batch history (only if ALL succeeded)
       setUploadState((current) => {
+        console.log('   Current active files:', current.activeFiles.map(f => ({ id: f.id, status: f.status })));
+        
         const completedFilesFromBatch = current.activeFiles.filter((f) =>
           f.status === 'completed' &&
           pendingFiles.some((pf) => pf.id === f.id)
         );
         
+        console.log('   Completed from batch:', completedFilesFromBatch.length);
+        
         const allFilesSucceeded = completedFilesFromBatch.length === pendingFiles.length;
+        console.log('   All succeeded?', allFilesSucceeded);
         
         // Only create batch if ALL files succeeded
         const newBatch: UploadBatch | null = allFilesSucceeded && completedFilesFromBatch.length > 0
@@ -233,11 +246,18 @@ export const useUpload = (maxConcurrent: number = 5) => {
             }
           : null;
         
+        console.log('   New batch?', newBatch ? `Yes (${newBatch.files.length} files)` : 'No');
+        console.log('   New batch ID:', newBatch?.id);
+        console.log('   Existing batch IDs:', current.completedBatches.map(b => b.id));
+        
         const newBatches = newBatch
           ? (current.completedBatches.some(b => b.id === newBatch.id)
               ? current.completedBatches
               : [newBatch, ...current.completedBatches])
           : current.completedBatches;
+        
+        console.log('   Total batches:', newBatches.length);
+        console.log('   Final batch IDs:', newBatches.map(b => b.id));
         
         return {
           // Keep failed files in active, remove completed ones
