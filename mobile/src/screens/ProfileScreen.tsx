@@ -72,7 +72,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 8,
     padding: 20,
-    marginBottom: 30,
+    marginBottom: 0,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   userInfo: {
     alignItems: 'center',
@@ -91,7 +93,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
   },
   logoutButton: {
     backgroundColor: '#cc0000',

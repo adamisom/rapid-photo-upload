@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   batchFileItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 2,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },

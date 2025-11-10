@@ -14,8 +14,34 @@ export default function GalleryScreen() {
   const [totalPhotos, setTotalPhotos] = useState(0);
   const [tagInput, setTagInput] = useState<{ [key: string]: string }>({});
   const [tagErrors, setTagErrors] = useState<{ [key: string]: string }>({});
+  const [showSuggestions, setShowSuggestions] = useState<{ [key: string]: boolean }>({});
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const pageSize = 20;
+
+  // Get all unique tags from user's photos for autocomplete
+  const getAllUserTags = (): string[] => {
+    const tagSet = new Set<string>();
+    photos.forEach(photo => {
+      photo.tags?.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  };
+
+  // Get filtered tag suggestions based on input
+  const getTagSuggestions = (photoId: string): string[] => {
+    const input = (tagInput[photoId] || '').toLowerCase().trim();
+    if (!input) return [];
+
+    const photo = photos.find(p => p.id === photoId);
+    const existingTags = photo?.tags || [];
+    
+    return getAllUserTags()
+      .filter(tag => 
+        tag.toLowerCase().includes(input) && 
+        !existingTags.includes(tag)
+      )
+      .slice(0, 5); // Show max 5 suggestions
+  };
 
   const loadPhotos = useCallback(async () => {
     setLoading(true);
@@ -131,11 +157,18 @@ export default function GalleryScreen() {
       // Clear input and error
       setTagInput((prev) => ({ ...prev, [photoId]: '' }));
       setTagErrors((prev) => ({ ...prev, [photoId]: '' }));
+      setShowSuggestions((prev) => ({ ...prev, [photoId]: false }));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to add tag';
       setTagErrors((prev) => ({ ...prev, [photoId]: message }));
     }
   }, [photos, tagInput]);
+
+  const selectSuggestion = useCallback((photoId: string, suggestion: string) => {
+    setTagInput((prev) => ({ ...prev, [photoId]: suggestion }));
+    setShowSuggestions((prev) => ({ ...prev, [photoId]: false }));
+    void handleAddTag(photoId, suggestion);
+  }, [handleAddTag]);
 
   const handleRemoveTag = useCallback(async (photoId: string, tagToRemove: string) => {
     const photo = photos.find((p) => p.id === photoId);
