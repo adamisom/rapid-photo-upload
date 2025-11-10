@@ -41,6 +41,7 @@ interface UploadManager {
   error: string | null;
   addFiles: (newFiles: File[]) => void;
   removeFile: (fileId: string) => void;
+  removeAll: () => void;
   retryFile: (fileId: string) => void;
   clearLastBatch: () => void;
   clearPreviousBatches: () => void;
@@ -80,6 +81,13 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     setUploadState((prev) => ({
       ...prev,
       activeFiles: prev.activeFiles.filter((f) => f.id !== fileId)
+    }));
+  }, []);
+
+  const removeAll = useCallback(() => {
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: []
     }));
   }, []);
 
@@ -291,6 +299,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     error,
     addFiles,
     removeFile,
+    removeAll,
     retryFile,
     clearLastBatch,
     clearPreviousBatches,
