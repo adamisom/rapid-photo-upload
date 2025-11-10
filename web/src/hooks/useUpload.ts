@@ -7,7 +7,7 @@
  * Handles: file selection, presigned URLs, S3 uploads, progress tracking
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { uploadService } from '../services/uploadService';
 import type { UploadFile } from '../types';
 
@@ -62,6 +62,35 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
   const [totalProgress, setTotalProgress] = useState(0);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
   const [uploadStartTime, setUploadStartTime] = useState<number | null>(null);
+
+  // Recalculate progress during upload whenever files change status
+  useEffect(() => {
+    if (!isUploading) return;
+    
+    const uploadingFiles = uploadState.activeFiles.filter((f) => 
+      f.status === 'uploading' || f.status === 'completed' || f.status === 'pending'
+    );
+    
+    if (uploadingFiles.length === 0) return;
+    
+    // Calculate progress by bytes, not by file count
+    const totalBytes = uploadingFiles.reduce((sum, f) => sum + f.file.size, 0);
+    const completedBytes = uploadingFiles
+      .filter((f) => f.status === 'completed')
+      .reduce((sum, f) => sum + f.file.size, 0);
+    const progress = totalBytes > 0 ? (completedBytes / totalBytes) * 100 : 0;
+    setTotalProgress(progress);
+    
+    // Calculate ETA
+    const completedCount = uploadingFiles.filter((f) => f.status === 'completed').length;
+    if (uploadStartTime && completedCount > 0) {
+      const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
+      const averageTimePerFile = elapsedSeconds / completedCount;
+      const remainingFiles = uploadingFiles.length - completedCount;
+      const estimatedSeconds = Math.ceil(averageTimePerFile * remainingFiles);
+      setEstimatedTimeRemaining(estimatedSeconds);
+    }
+  }, [uploadState.activeFiles, isUploading, uploadStartTime]);
 
   const addFiles = useCallback((newFiles: File[]) => {
     setError(null);
@@ -225,6 +254,31 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
         // Check if ALL files in the batch succeeded
         const allFilesSucceeded = completedFilesFromBatch.length === pendingFiles.length;
         
+        // Calculate total progress BEFORE moving files (size-based, not count-based)
+        // This ensures we calculate based on final state
+        const currentBatchFiles = current.activeFiles.filter((f) =>
+          pendingFiles.some((pf) => pf.id === f.id)
+        );
+        
+        // Calculate progress by bytes, not by file count (more accurate for mixed file sizes)
+        const totalBytes = pendingFiles.reduce((sum, f) => sum + f.file.size, 0);
+        const completedBytes = currentBatchFiles
+          .filter((f) => f.status === 'completed')
+          .reduce((sum, f) => sum + f.file.size, 0);
+        const progress = totalBytes > 0 ? (completedBytes / totalBytes) * 100 : 0;
+        setTotalProgress(progress);
+        
+        const completedCount = currentBatchFiles.filter((f) => f.status === 'completed').length;
+        
+        // Calculate ETA based on elapsed time and progress
+        if (uploadStartTime && completedCount > 0) {
+          const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
+          const averageTimePerFile = elapsedSeconds / completedCount;
+          const remainingFiles = pendingFiles.length - completedCount;
+          const estimatedSeconds = Math.ceil(averageTimePerFile * remainingFiles);
+          setEstimatedTimeRemaining(estimatedSeconds);
+        }
+        
         // Only create batch if ALL files succeeded
         const newBatch = allFilesSucceeded && completedFilesFromBatch.length > 0 ? {
           id: newBatchId,
@@ -254,26 +308,8 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
           completedBatches: newBatches
         };
       });
-
-      // Calculate total progress and estimated time remaining
-      // Access current state to check completed files
-      const currentBatchFiles = uploadState.activeFiles.filter((f) =>
-        pendingFiles.some((pf) => pf.id === f.id)
-      );
-      const completedCount = currentBatchFiles.filter((f) => f.status === 'completed').length;
-      const progress = (completedCount / pendingFiles.length) * 100;
-      setTotalProgress(progress);
-      
-      // Calculate ETA based on elapsed time and progress
-      if (uploadStartTime && completedCount > 0) {
-        const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
-        const averageTimePerFile = elapsedSeconds / completedCount;
-        const remainingFiles = pendingFiles.length - completedCount;
-        const estimatedSeconds = Math.ceil(averageTimePerFile * remainingFiles);
-        setEstimatedTimeRemaining(estimatedSeconds);
-      }
     }
-  }, [uploadState.activeFiles, maxConcurrent, updateFileProgress, updateFileStatus, uploadStartTime]);
+  }, [uploadState, maxConcurrent, updateFileProgress, updateFileStatus, uploadStartTime]);
 
   const cancelUpload = useCallback(() => {
     setIsUploading(false);
