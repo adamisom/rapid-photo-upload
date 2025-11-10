@@ -17,7 +17,8 @@ export default function UploadPage() {
     files, 
     completedBatches,
     isUploading, 
-    totalProgress, 
+    totalProgress,
+    estimatedTimeRemaining,
     error, 
     addFiles, 
     removeFile,
@@ -77,6 +78,16 @@ export default function UploadPage() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const formatTimeRemaining = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
   };
 
   // Helper to render a batch section
@@ -193,6 +204,11 @@ export default function UploadPage() {
                     <p className="text-xs text-gray-500 mt-1">
                       {files.filter((f) => f.status === 'uploading').length} uploading
                     </p>
+                    {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && (
+                      <p className="text-xs text-gray-600 mt-1 font-medium">
+                        ~{formatTimeRemaining(estimatedTimeRemaining)} remaining
+                      </p>
+                    )}
                   </div>
                 </div>
                 <ProgressBar

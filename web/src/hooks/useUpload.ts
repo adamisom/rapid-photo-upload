@@ -37,6 +37,7 @@ interface UploadManager {
   completedBatches: UploadBatch[];
   isUploading: boolean;
   totalProgress: number;
+  estimatedTimeRemaining: number | null; // seconds
   error: string | null;
   addFiles: (newFiles: File[]) => void;
   removeFile: (fileId: string) => void;
@@ -58,6 +59,8 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalProgress, setTotalProgress] = useState(0);
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
+  const [uploadStartTime, setUploadStartTime] = useState<number | null>(null);
 
   const addFiles = useCallback((newFiles: File[]) => {
     setError(null);
@@ -139,6 +142,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
 
     setIsUploading(true);
     setError(null);
+    setUploadStartTime(Date.now()); // Track start time for ETA calculation
 
     // Generate new batchId when "Start Upload" is clicked
     const newBatchId = uuidv4();
@@ -243,11 +247,21 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
         };
       });
 
-      // Calculate total progress for pending files only
+      // Calculate total progress and estimated time remaining
       const completedCount = pendingFiles.filter((f) => f.status === 'completed').length;
-      setTotalProgress((completedCount / pendingFiles.length) * 100);
+      const progress = (completedCount / pendingFiles.length) * 100;
+      setTotalProgress(progress);
+      
+      // Calculate ETA based on elapsed time and progress
+      if (uploadStartTime && completedCount > 0) {
+        const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
+        const averageTimePerFile = elapsedSeconds / completedCount;
+        const remainingFiles = pendingFiles.length - completedCount;
+        const estimatedSeconds = Math.ceil(averageTimePerFile * remainingFiles);
+        setEstimatedTimeRemaining(estimatedSeconds);
+      }
     }
-  }, [uploadState.activeFiles, maxConcurrent, updateFileProgress, updateFileStatus]);
+  }, [uploadState.activeFiles, maxConcurrent, updateFileProgress, updateFileStatus, uploadStartTime]);
 
   const cancelUpload = useCallback(() => {
     setIsUploading(false);
@@ -263,6 +277,8 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     setIsUploading(false);
     setError(null);
     setTotalProgress(0);
+    setEstimatedTimeRemaining(null);
+    setUploadStartTime(null);
   }, []);
 
   return {
@@ -271,6 +287,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     completedBatches: uploadState.completedBatches,
     isUploading,
     totalProgress,
+    estimatedTimeRemaining,
     error,
     addFiles,
     removeFile,
