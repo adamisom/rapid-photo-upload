@@ -40,6 +40,7 @@ interface UploadManager {
   error: string | null;
   addFiles: (newFiles: File[]) => void;
   removeFile: (fileId: string) => void;
+  retryFile: (fileId: string) => void;
   clearLastBatch: () => void;
   clearPreviousBatches: () => void;
   startUpload: () => Promise<void>;
@@ -76,6 +77,17 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     setUploadState((prev) => ({
       ...prev,
       activeFiles: prev.activeFiles.filter((f) => f.id !== fileId)
+    }));
+  }, []);
+
+  const retryFile = useCallback((fileId: string) => {
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: prev.activeFiles.map((f) =>
+        f.id === fileId
+          ? { ...f, status: 'pending', progress: 0, error: undefined }
+          : f
+      )
     }));
   }, []);
 
@@ -189,16 +201,20 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     } finally {
       setIsUploading(false);
 
-      // ATOMIC STATE UPDATE: Move completed files to batch history
+      // ATOMIC STATE UPDATE: Move batch to history ONLY if ALL files succeeded
+      // Keep any failed files in active area so they can be retried
       setUploadState((current) => {
-        // Extract completed files from THIS batch only
+        // Extract completed files from THIS batch
         const completedFilesFromBatch = current.activeFiles.filter((f) => 
-          (f.status === 'completed' || f.status === 'failed') && 
+          f.status === 'completed' && 
           pendingFiles.some((pf) => pf.id === f.id)
         );
         
-        // Create new batch if we have completed files
-        const newBatch = completedFilesFromBatch.length > 0 ? {
+        // Check if ALL files in the batch succeeded
+        const allFilesSucceeded = completedFilesFromBatch.length === pendingFiles.length;
+        
+        // Only create batch if ALL files succeeded
+        const newBatch = allFilesSucceeded && completedFilesFromBatch.length > 0 ? {
           id: newBatchId,
           files: completedFilesFromBatch,
           completedAt: new Date()
@@ -212,10 +228,17 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
           : current.completedBatches;
         
         // Return new state with both updates atomically
+        // If all succeeded: remove completed files from active area
+        // If any failed: keep ALL files (both completed and failed) in active area for review
         return {
-          activeFiles: current.activeFiles.filter(f => 
-            f.status === 'pending' || f.status === 'uploading'
-          ),
+          activeFiles: allFilesSucceeded 
+            ? current.activeFiles.filter(f => 
+                f.status === 'pending' || f.status === 'uploading'
+              )
+            : current.activeFiles.filter(f => 
+                f.status === 'pending' || f.status === 'uploading' || f.status === 'failed' || 
+                (f.status === 'completed' && pendingFiles.some(pf => pf.id === f.id))
+              ),
           completedBatches: newBatches
         };
       });
@@ -251,6 +274,7 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     error,
     addFiles,
     removeFile,
+    retryFile,
     clearLastBatch,
     clearPreviousBatches,
     startUpload,
