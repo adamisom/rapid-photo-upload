@@ -1,6 +1,7 @@
 package com.rapid.features.photos.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class PhotoDto {
     
@@ -9,15 +10,17 @@ public class PhotoDto {
     private Long fileSizeBytes;
     private String downloadUrl;
     private LocalDateTime uploadedAt;
+    private List<String> tags;
     
     public PhotoDto() {}
     
-    public PhotoDto(String id, String originalFilename, Long fileSizeBytes, String downloadUrl, LocalDateTime uploadedAt) {
+    public PhotoDto(String id, String originalFilename, Long fileSizeBytes, String downloadUrl, LocalDateTime uploadedAt, List<String> tags) {
         this.id = id;
         this.originalFilename = originalFilename;
         this.fileSizeBytes = fileSizeBytes;
         this.downloadUrl = downloadUrl;
         this.uploadedAt = uploadedAt;
+        this.tags = tags;
     }
     
     public String getId() {
@@ -58,6 +61,14 @@ public class PhotoDto {
     
     public void setUploadedAt(LocalDateTime uploadedAt) {
         this.uploadedAt = uploadedAt;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
     }
 }
 

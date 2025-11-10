@@ -50,6 +50,72 @@ export default function GalleryPage() {
     }
   };
 
+  const handleAddTag = async (e: React.FormEvent, photoId: string) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const input = form.querySelector('input') as HTMLInputElement;
+    const tag = input.value.trim();
+
+    if (!tag) return;
+
+    const photo = photos.find(p => p.id === photoId);
+    if (!photo) return;
+
+    // Validate
+    if (tag.length > 50) {
+      setError('Tag must be 50 characters or less');
+      return;
+    }
+
+    if (photo.tags && photo.tags.length >= 3) {
+      setError('Maximum 3 tags allowed');
+      return;
+    }
+
+    if (photo.tags && photo.tags.includes(tag)) {
+      setError('Tag already exists');
+      return;
+    }
+
+    try {
+      const newTags = [...(photo.tags || []), tag];
+      await photoService.updateTags(photoId, newTags);
+      
+      // Update local state
+      setPhotos(photos.map(p => 
+        p.id === photoId ? { ...p, tags: newTags } : p
+      ));
+      
+      input.value = '';
+      setError(null);
+    } catch (err) {
+      console.error('Failed to add tag:', err);
+      const message = err instanceof Error ? err.message : 'Failed to add tag';
+      setError(message);
+    }
+  };
+
+  const handleRemoveTag = async (photoId: string, tagToRemove: string) => {
+    const photo = photos.find(p => p.id === photoId);
+    if (!photo) return;
+
+    try {
+      const newTags = (photo.tags || []).filter(t => t !== tagToRemove);
+      await photoService.updateTags(photoId, newTags);
+      
+      // Update local state
+      setPhotos(photos.map(p => 
+        p.id === photoId ? { ...p, tags: newTags } : p
+      ));
+      
+      setError(null);
+    } catch (err) {
+      console.error('Failed to remove tag:', err);
+      const message = err instanceof Error ? err.message : 'Failed to remove tag';
+      setError(message);
+    }
+  };
+
   const formatFileSize = (bytes: number): string => {
     const mb = bytes / 1024 / 1024;
     if (mb < 1) {
@@ -129,9 +195,60 @@ export default function GalleryPage() {
                     >
                       {photo.originalFilename}
                     </a>
-                    <p className="text-xs text-gray-500 mb-4">
+                    <p className="text-xs text-gray-500 mb-3">
                       {formatFileSize(photo.fileSizeBytes)}
                     </p>
+
+                    {/* Tags Section */}
+                    <div className="mb-3">
+                      <div className="flex flex-wrap gap-1 mb-2 min-h-[24px]">
+                        {photo.tags && photo.tags.length > 0 ? (
+                          photo.tags.map((tag, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                            >
+                              {tag}
+                              <button
+                                onClick={() => handleRemoveTag(photo.id, tag)}
+                                className="hover:text-blue-900 transition-colors"
+                                title="Remove tag"
+                              >
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">No tags</span>
+                        )}
+                      </div>
+                      
+                      {(!photo.tags || photo.tags.length < 3) && (
+                        <form onSubmit={(e) => handleAddTag(e, photo.id)} className="flex gap-1">
+                          <input
+                            type="text"
+                            maxLength={50}
+                            placeholder="Add tag..."
+                            className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddTag(e as unknown as React.FormEvent, photo.id);
+                              }
+                            }}
+                          />
+                          <button
+                            type="submit"
+                            className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                            title="Add tag"
+                          >
+                            +
+                          </button>
+                        </form>
+                      )}
+                    </div>
 
                     {/* Delete Button */}
                     <button

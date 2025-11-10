@@ -3,8 +3,12 @@ package com.rapid.domain;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "photos", indexes = {
@@ -38,6 +42,10 @@ public class Photo {
     private PhotoStatus status;
     
     private String errorMessage;
+    
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<String> tags = new ArrayList<>();
     
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -138,6 +146,14 @@ public class Photo {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
     }
 }
 

@@ -36,7 +36,8 @@ public class PhotoQueryService {
                 p.getOriginalFilename(),
                 p.getFileSizeBytes(),
                 s3Service.generatePresignedGetUrl(userId, p.getS3Key()),
-                p.getCreatedAt()
+                p.getCreatedAt(),
+                p.getTags()
             ))
             .collect(Collectors.toList());
         
@@ -61,7 +62,8 @@ public class PhotoQueryService {
             photo.getOriginalFilename(),
             photo.getFileSizeBytes(),
             s3Service.generatePresignedGetUrl(userId, photo.getS3Key()),
-            photo.getCreatedAt()
+            photo.getCreatedAt(),
+            photo.getTags()
         );
     }
 }

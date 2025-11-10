@@ -61,6 +61,7 @@ export interface Photo {
   fileSizeBytes: number;
   downloadUrl: string;
   uploadedAt: string;
+  tags: string[];
 }
 
 export interface PhotoListResponse {
@@ -76,6 +77,7 @@ export interface PhotoDto {
   fileSizeBytes: number;
   downloadUrl: string;
   uploadedAt: string;
+  tags: string[];
 }
 
 export interface PhotoStatusDto {

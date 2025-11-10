@@ -2,8 +2,10 @@ package com.rapid.features.photos.controller;
 
 import com.rapid.features.photos.dto.PhotoDto;
 import com.rapid.features.photos.dto.PhotoListResponse;
+import com.rapid.features.photos.dto.UpdateTagsRequest;
 import com.rapid.features.photos.service.PhotoCommandService;
 import com.rapid.features.photos.service.PhotoQueryService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -37,6 +39,15 @@ public class PhotoController {
         String userId = getCurrentUserId();
         PhotoDto response = photoQueryService.getPhotoById(userId, photoId);
         return ResponseEntity.ok(response);
+    }
+    
+    @PutMapping("/{photoId}/tags")
+    public ResponseEntity<?> updateTags(
+            @PathVariable String photoId,
+            @Valid @RequestBody UpdateTagsRequest request) {
+        String userId = getCurrentUserId();
+        photoCommandService.updateTags(userId, photoId, request);
+        return ResponseEntity.ok(Map.of("status", "success"));
     }
     
     @DeleteMapping("/{photoId}")

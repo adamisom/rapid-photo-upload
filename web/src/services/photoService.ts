@@ -25,6 +25,13 @@ export const photoService = {
   },
 
   /**
+   * Update photo tags (max 3, 50 chars each)
+   */
+  updateTags: async (photoId: string, tags: string[]): Promise<void> => {
+    await apiClient.put(`/api/photos/${photoId}/tags`, { tags });
+  },
+
+  /**
    * Delete a photo
    */
   deletePhoto: async (photoId: string): Promise<void> => {
