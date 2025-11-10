@@ -30,10 +30,6 @@ export default function ProfileScreen() {
       <Text style={styles.title}>Profile</Text>
 
       <View style={styles.userCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.email.charAt(0).toUpperCase()}</Text>
-        </View>
-
         <View style={styles.userInfo}>
           <Text style={styles.emailLabel}>Email</Text>
           <Text style={styles.email}>{user?.email}</Text>
@@ -69,6 +65,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
+    paddingTop: 60,
     color: '#333',
   },
   userCard: {
@@ -76,21 +73,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 20,
     marginBottom: 30,
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#0066cc',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  avatarText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
   },
   userInfo: {
     alignItems: 'center',

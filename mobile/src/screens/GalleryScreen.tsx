@@ -301,6 +301,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 15,
+    paddingTop: 60,
     color: '#333',
   },
   errorBox: {

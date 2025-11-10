@@ -19,8 +19,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const storedToken = await authService.getToken();
         if (storedToken) {
           setToken(storedToken);
-          // In a real app, you'd fetch user info from backend or decode JWT
-          // For now, we'll assume token presence means authenticated
+          // Decode JWT to get user info
+          const payload = storedToken.split('.')[1];
+          const decoded = JSON.parse(atob(payload));
+          setUser({
+            id: decoded.userId || decoded.sub,
+            email: decoded.email || decoded.username,
+          });
         }
       } catch (error) {
         console.error('Failed to initialize auth:', error);
@@ -37,9 +42,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('🔐 Attempting login for:', email);
       const response = await authService.login(email, password);
-      console.log('✅ Login successful:', response.user?.email);
+      console.log('✅ Login successful:', email);
       setToken(response.token);
-      setUser(response.user);
+      // Decode JWT to get user info
+      const payload = response.token.split('.')[1];
+      const decoded = JSON.parse(atob(payload));
+      setUser({
+        id: decoded.userId || decoded.sub,
+        email: decoded.email || decoded.username || email,
+      });
     } catch (error) {
       console.error('❌ Login error:', error);
       throw error;
@@ -53,7 +64,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await authService.register(email, password);
       setToken(response.token);
-      setUser(response.user);
+      // Decode JWT to get user info
+      const payload = response.token.split('.')[1];
+      const decoded = JSON.parse(atob(payload));
+      setUser({
+        id: decoded.userId || decoded.sub,
+        email: decoded.email || decoded.username || email,
+      });
     } finally {
       setIsLoading(false);
     }

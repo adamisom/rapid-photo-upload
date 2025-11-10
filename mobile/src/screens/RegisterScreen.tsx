@@ -122,6 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     textAlign: 'center',
+    paddingTop: 60,
     marginBottom: 10,
     color: '#333',
   },
