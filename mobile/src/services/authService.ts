@@ -12,11 +12,23 @@ export const authService = {
   },
 
   login: async (email: string, password: string): Promise<AuthResponse> => {
-    const request: LoginRequest = { email, password };
-    const response = await apiClient.post<AuthResponse>('/api/auth/login', request);
-    const { token } = response.data;
-    await SecureStore.setItemAsync('authToken', token);
-    return response.data;
+    try {
+      console.log('📡 Sending login request...');
+      const request: LoginRequest = { email, password };
+      const response = await apiClient.post<AuthResponse>('/api/auth/login', request);
+      console.log('✅ Login response received');
+      const { token } = response.data;
+      await SecureStore.setItemAsync('authToken', token);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Login failed:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw error;
+    }
   },
 
   logout: async (): Promise<void> => {
