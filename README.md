@@ -4,6 +4,21 @@ A production-ready, AI-assisted monorepo featuring concurrent multi-file uploads
 
 ---
 
+## ⚠️ **AWS Cost Control - Built-In Limits**
+
+**To prevent runaway AWS bills, the following hard limits are enforced:**
+
+| Limit Type | Value | Error Message |
+|------------|-------|---------------|
+| **Max Users** | 50 total users | "Can't register more users at this time" |
+| **Max Photos** | 1,500 total photos | "You've reached your image limit" |
+| **Max Storage** | 500 MB total | "You've reached your image limit" |
+| **Max File Size** | 100 MB per file | "Image too large (max 100 MB)" |
+
+These limits are checked server-side before any upload or registration occurs. See `LimitsService.java` for implementation details.
+
+---
+
 ## 📚 **Essential Documentation**
 
 ### For Evaluators & Technical Review:

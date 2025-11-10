@@ -5,6 +5,7 @@ import com.rapid.features.auth.dto.AuthResponse;
 import com.rapid.features.auth.dto.LoginRequest;
 import com.rapid.features.auth.dto.RegisterRequest;
 import com.rapid.infrastructure.repository.UserRepository;
+import com.rapid.infrastructure.service.LimitsService;
 import com.rapid.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,7 +39,13 @@ public class AuthService {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
     
+    @Autowired
+    private LimitsService limitsService;
+    
     public AuthResponse register(RegisterRequest request) {
+        // Check user limit before creating account
+        limitsService.checkUserLimit();
+        
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
         }

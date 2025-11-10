@@ -10,6 +10,7 @@ import com.rapid.features.upload.dto.UploadCompleteRequest;
 import com.rapid.infrastructure.repository.PhotoRepository;
 import com.rapid.infrastructure.repository.UploadBatchRepository;
 import com.rapid.infrastructure.repository.UserRepository;
+import com.rapid.infrastructure.service.LimitsService;
 import com.rapid.infrastructure.storage.S3PresignedUrlService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,10 +41,18 @@ public class UploadCommandService {
     @Autowired
     private S3PresignedUrlService s3Service;
     
+    @Autowired
+    private LimitsService limitsService;
+    
     @Transactional
     public InitiateUploadResponse initiateUpload(String userId, InitiateUploadRequest request) {
         log.info("Initiate upload: userId={}, batchId={}, filename={}, size={}", 
             userId, request.getBatchId(), request.getFilename(), request.getFileSizeBytes());
+        
+        // Check limits before processing upload
+        limitsService.checkFileSizeLimit(request.getFileSizeBytes());
+        limitsService.checkPhotoLimit();
+        limitsService.checkStorageLimit();
         
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found"));

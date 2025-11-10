@@ -1,5 +1,6 @@
 package com.rapid.infrastructure.exception;
 
+import com.rapid.infrastructure.exceptions.LimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,9 +9,27 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    
+    @ExceptionHandler(LimitExceededException.class)
+    public ResponseEntity<?> handleLimitExceeded(LimitExceededException ex,
+                                                 HttpServletRequest request) {
+        ApiError error = new ApiError();
+        error.setTimestamp(LocalDateTime.now());
+        error.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        error.setMessage(ex.getMessage());
+        error.setPath(request.getRequestURI());
+        
+        // Also include limit type for frontend handling
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(Map.of(
+                "error", error,
+                "limitType", ex.getLimitType()
+            ));
+    }
     
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationExceptions(MethodArgumentNotValidException ex,
