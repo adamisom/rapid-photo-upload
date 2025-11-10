@@ -28,6 +28,15 @@ Before diving into this comprehensive architecture guide, we strongly recommend 
 - **Visual Diagrams**: Upload flow (5 steps), system architecture
 - **Performance Results**: Load test metrics (100 photos × 2MB)
 
+### 🤖 **[AI_TOOLS_USED.md](misc/AI_TOOLS_USED.md)** - Human-AI Collaboration Story
+**Read this for:** How this project was built with AI assistance
+- **Development Process**: 6 phases from planning to documentation
+- **Bugs Fixed**: 5 critical bugs discovered through human testing
+- **Decision Split**: What human decided vs how AI implemented
+- **Code Metrics**: 34 backend files, ~2000 web lines, ~2500 mobile lines
+- **Strengths**: AI rapid prototyping vs human requirements/testing
+- **Time Savings**: 20-30 hours collaboration vs 2-3 weeks manual work
+
 ---
 
 ## 1. System Architecture Overview

@@ -33,6 +33,17 @@ High-level technical decisions, trade-offs, and "why" behind the architecture.
 #### 📖 **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Complete System Architecture
 Full technical architecture guide with implementation details.
 
+#### 🤖 **[AI_TOOLS_USED.md](docs/misc/AI_TOOLS_USED.md)** - Human-AI Collaboration Story
+Development process, bugs fixed, and lessons learned from AI-assisted development.
+
+**Contains:**
+- Development process across 6 phases (planning → backend → frontend → testing → docs)
+- 5 critical bugs fixed through human testing (state timing, race conditions, progress calculation)
+- Human decisions vs AI implementation (who decided what, how patterns were applied)
+- Code quality metrics (34 backend files, ~2000 web lines, ~2500 mobile lines)
+- AI strengths (rapid prototyping, pattern implementation) vs Human value-add (requirements, testing, UX)
+- Time savings: 20-30 hours collaboration vs 2-3 weeks manual work
+
 ---
 
 ## Project Structure
