@@ -264,26 +264,55 @@ export default function GalleryScreen() {
                   
                   {/* Add tag input */}
                   {(!item.tags || item.tags.length < 3) && (
-                    <View style={styles.tagInputContainer}>
-                      <TextInput
-                        style={styles.tagInput}
-                        placeholder="Add tag..."
-                        maxLength={50}
-                        value={tagInput[item.id] || ''}
-                        onChangeText={(text) => {
-                          setTagInput((prev) => ({ ...prev, [item.id]: text }));
-                          if (tagErrors[item.id]) {
-                            setTagErrors((prev) => ({ ...prev, [item.id]: '' }));
-                          }
-                        }}
-                        onSubmitEditing={() => handleAddTag(item.id)}
-                      />
-                      <TouchableOpacity
-                        style={styles.tagAddButton}
-                        onPress={() => handleAddTag(item.id)}
-                      >
-                        <Text style={styles.tagAddButtonText}>+</Text>
-                      </TouchableOpacity>
+                    <View style={styles.tagInputWrapper}>
+                      <View style={styles.tagInputContainer}>
+                        <TextInput
+                          style={styles.tagInput}
+                          placeholder="Add tag..."
+                          maxLength={50}
+                          value={tagInput[item.id] || ''}
+                          onChangeText={(text) => {
+                            setTagInput((prev) => ({ ...prev, [item.id]: text }));
+                            setShowSuggestions((prev) => ({ ...prev, [item.id]: text.length > 0 }));
+                            if (tagErrors[item.id]) {
+                              setTagErrors((prev) => ({ ...prev, [item.id]: '' }));
+                            }
+                          }}
+                          onFocus={() => {
+                            if ((tagInput[item.id] || '').length > 0) {
+                              setShowSuggestions((prev) => ({ ...prev, [item.id]: true }));
+                            }
+                          }}
+                          onBlur={() => {
+                            // Delay to allow suggestion click
+                            setTimeout(() => {
+                              setShowSuggestions((prev) => ({ ...prev, [item.id]: false }));
+                            }, 200);
+                          }}
+                          onSubmitEditing={() => handleAddTag(item.id)}
+                        />
+                        <TouchableOpacity
+                          style={styles.tagAddButton}
+                          onPress={() => handleAddTag(item.id)}
+                        >
+                          <Text style={styles.tagAddButtonText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                      
+                      {/* Tag suggestions dropdown */}
+                      {showSuggestions[item.id] && getTagSuggestions(item.id).length > 0 && (
+                        <View style={styles.suggestionsDropdown}>
+                          {getTagSuggestions(item.id).map((suggestion, idx) => (
+                            <TouchableOpacity
+                              key={idx}
+                              onPress={() => selectSuggestion(item.id, suggestion)}
+                              style={styles.suggestionItem}
+                            >
+                              <Text style={styles.suggestionText}>{suggestion}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>
@@ -459,6 +488,9 @@ const styles = StyleSheet.create({
     color: '#cc0000',
     marginBottom: 4,
   },
+  tagInputWrapper: {
+    position: 'relative',
+  },
   tagInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -483,6 +515,34 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  suggestionsDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 30,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 4,
+    marginTop: 2,
+    maxHeight: 120,
+    zIndex: 1000,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  suggestionItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  suggestionText: {
+    fontSize: 11,
+    color: '#333',
   },
   deleteButton: {
     backgroundColor: '#cc0000',
