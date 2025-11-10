@@ -78,9 +78,9 @@ export default function GalleryPage() {
     }
   };
 
-  const handleAddTag = async (e: React.FormEvent, photoId: string) => {
+  const handleAddTag = async (e: React.FormEvent, photoId: string, overrideTag?: string) => {
     e.preventDefault();
-    const tag = (tagInput[photoId] || '').trim();
+    const tag = overrideTag || (tagInput[photoId] || '').trim();
 
     if (!tag) return;
 
@@ -130,10 +130,9 @@ export default function GalleryPage() {
   };
 
   const selectSuggestion = (photoId: string, tag: string) => {
-    setTagInput(prev => ({ ...prev, [photoId]: tag }));
     setShowSuggestions(prev => ({ ...prev, [photoId]: false }));
-    // Auto-submit
-    handleAddTag({ preventDefault: () => {} } as React.FormEvent, photoId);
+    // Pass the tag directly to avoid state timing issues
+    handleAddTag({ preventDefault: () => {} } as React.FormEvent, photoId, tag);
   };
 
   const handleRemoveTag = async (photoId: string, tagToRemove: string) => {
