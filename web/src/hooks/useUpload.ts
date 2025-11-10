@@ -256,26 +256,22 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
       });
 
       // Calculate total progress and estimated time remaining
-      // Check current state, not the original pendingFiles array
-      setUploadState((current) => {
-        const currentBatchFiles = current.activeFiles.filter((f) =>
-          pendingFiles.some((pf) => pf.id === f.id)
-        );
-        const completedCount = currentBatchFiles.filter((f) => f.status === 'completed').length;
-        const progress = (completedCount / pendingFiles.length) * 100;
-        setTotalProgress(progress);
-        
-        // Calculate ETA based on elapsed time and progress
-        if (uploadStartTime && completedCount > 0) {
-          const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
-          const averageTimePerFile = elapsedSeconds / completedCount;
-          const remainingFiles = pendingFiles.length - completedCount;
-          const estimatedSeconds = Math.ceil(averageTimePerFile * remainingFiles);
-          setEstimatedTimeRemaining(estimatedSeconds);
-        }
-        
-        return current; // No state change, just calculating progress
-      });
+      // Access current state to check completed files
+      const currentBatchFiles = uploadState.activeFiles.filter((f) =>
+        pendingFiles.some((pf) => pf.id === f.id)
+      );
+      const completedCount = currentBatchFiles.filter((f) => f.status === 'completed').length;
+      const progress = (completedCount / pendingFiles.length) * 100;
+      setTotalProgress(progress);
+      
+      // Calculate ETA based on elapsed time and progress
+      if (uploadStartTime && completedCount > 0) {
+        const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
+        const averageTimePerFile = elapsedSeconds / completedCount;
+        const remainingFiles = pendingFiles.length - completedCount;
+        const estimatedSeconds = Math.ceil(averageTimePerFile * remainingFiles);
+        setEstimatedTimeRemaining(estimatedSeconds);
+      }
     }
   }, [uploadState.activeFiles, maxConcurrent, updateFileProgress, updateFileStatus, uploadStartTime]);
 
