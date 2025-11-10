@@ -8,6 +8,22 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DOMAIN ENTITY: User
+ * 
+ * Represents a user in the system following Domain-Driven Design (DDD) principles.
+ * This is the root of the User Aggregate, responsible for user identity and authentication.
+ * 
+ * Key Design Decisions:
+ * - Email is unique identifier for authentication
+ * - Password stored as bcrypt hash (never plain text)
+ * - OneToMany relationships to Photos and UploadBatches are navigational only
+ * - No business logic in User entity (authentication handled by AuthService)
+ * 
+ * This is a pure domain model with no framework dependencies beyond JPA annotations.
+ * The entity focuses on representing the user concept in the domain, not technical
+ * infrastructure concerns.
+ */
 @Entity
 @Table(name = "users")
 public class User {

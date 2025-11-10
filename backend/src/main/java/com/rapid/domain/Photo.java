@@ -10,6 +10,23 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DOMAIN ENTITY: Photo
+ * 
+ * Represents a photo in the system following Domain-Driven Design (DDD) principles.
+ * This is a rich domain object that encapsulates both data and business logic related
+ * to photo lifecycle management.
+ * 
+ * Key Design Decisions:
+ * - Uses JSONB for tags (PostgreSQL-specific, flexible schema)
+ * - S3 key is immutable once set (represents permanent storage location)
+ * - Status enum tracks photo lifecycle (PENDING → UPLOADING → UPLOADED/FAILED)
+ * - Relationship with User and UploadBatch establishes aggregate boundaries
+ * 
+ * Part of the Photo Aggregate in DDD terminology, with User and UploadBatch as
+ * separate aggregates. This design allows independent lifecycle management while
+ * maintaining referential integrity.
+ */
 @Entity
 @Table(name = "photos", indexes = {
     @Index(name = "idx_user_id", columnList = "user_id"),

@@ -8,6 +8,25 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DOMAIN ENTITY: UploadBatch
+ * 
+ * Represents a batch of photos uploaded together, following Domain-Driven Design (DDD).
+ * This aggregate tracks the lifecycle and status of a multi-file upload operation.
+ * 
+ * Key Design Decisions:
+ * - Client provides batch ID (UUID) to enable atomic batch creation across concurrent uploads
+ * - Counts (total, completed, failed) are updated atomically via database operations
+ * - Batch persists indefinitely for historical queries and troubleshooting
+ * - OneToMany relationship to Photos represents the batch's photos
+ * 
+ * Concurrency Strategy:
+ * - Uses PostgreSQL's "INSERT ... ON CONFLICT DO NOTHING" for race-safe creation
+ * - Count updates use database-level atomic increments
+ * - Multiple concurrent uploads to same batch ID don't cause conflicts
+ * 
+ * This is a core aggregate in the Upload Bounded Context of our DDD model.
+ */
 @Entity
 @Table(name = "upload_batches", indexes = {
     @Index(name = "idx_user_id_batch", columnList = "user_id")

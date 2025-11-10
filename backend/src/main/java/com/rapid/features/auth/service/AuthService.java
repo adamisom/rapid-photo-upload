@@ -10,6 +10,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+ * AUTH SERVICE: User authentication and registration
+ * 
+ * Handles user authentication following the Auth Bounded Context.
+ * This service combines both command (register) and query (login) operations
+ * as authentication is a cohesive unit that doesn't benefit from CQRS separation.
+ * 
+ * Security considerations:
+ * - Passwords hashed with BCrypt (handled by PasswordEncoder)
+ * - JWT tokens generated with configurable expiration
+ * - Email uniqueness enforced at database level
+ * - No plain text passwords ever stored or logged
+ * 
+ * This is part of the Vertical Slice Architecture - all auth logic is in
+ * the features.auth package, completely independent from upload and photo features.
+ */
 @Service
 public class AuthService {
     

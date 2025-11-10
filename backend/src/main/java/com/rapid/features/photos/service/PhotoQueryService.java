@@ -16,6 +16,21 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * QUERY SERVICE: Read-only operations for photos
+ * 
+ * Part of CQRS pattern - handles all read operations for photos.
+ * Methods in this service:
+ * - Never modify state
+ * - Return DTOs (not domain entities)
+ * - Generate presigned URLs for S3 access
+ * - Filter by user ID for security
+ * 
+ * This separation from PhotoCommandService allows:
+ * - Independent optimization of reads vs writes
+ * - Clear separation of concerns
+ * - Easier caching strategies (future enhancement)
+ */
 @Service
 public class PhotoQueryService {
     
