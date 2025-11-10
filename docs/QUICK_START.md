@@ -247,7 +247,7 @@ export DB_USERNAME="postgres"
 export DB_PASSWORD="postgres"
 
 # AWS S3 (required for Phase 2 onwards)
-export AWS_REGION="us-east-1"
+export AWS_REGION="us-east-2"
 export AWS_S3_BUCKET="rapidphotoupload-adamisom"
 export AWS_ACCESS_KEY_ID="your-key"
 export AWS_SECRET_ACCESS_KEY="your-secret"

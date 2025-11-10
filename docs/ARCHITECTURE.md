@@ -413,7 +413,7 @@ DB_USERNAME=postgres
 DB_PASSWORD=postgres
 
 # AWS S3
-AWS_REGION=us-east-1
+AWS_REGION=us-east-2
 AWS_ACCESS_KEY_ID=your-aws-access-key
 AWS_SECRET_ACCESS_KEY=your-aws-secret-key
 AWS_S3_BUCKET=rapidphotoupload-adamisom

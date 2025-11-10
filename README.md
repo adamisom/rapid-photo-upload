@@ -194,7 +194,7 @@ DATABASE_URL=postgresql://localhost:5432/rapidphoto_dev
 JWT_SECRET=your-256-bit-secret
 AWS_ACCESS_KEY_ID=your-key
 AWS_SECRET_ACCESS_KEY=your-secret
-AWS_REGION=us-east-1
+AWS_REGION=us-east-2
 AWS_S3_BUCKET=rapidphotoupload-adamisom
 
 # Web Frontend

@@ -607,7 +607,7 @@ DATABASE_PASSWORD=yourpassword
 JWT_SECRET=your-256-bit-secret-key-here
 AWS_ACCESS_KEY_ID=your-aws-key
 AWS_SECRET_ACCESS_KEY=your-aws-secret
-AWS_REGION=us-east-1
+AWS_REGION=us-east-2
 AWS_S3_BUCKET=rapidphoto-uploads
 
 # Frontend (.env)

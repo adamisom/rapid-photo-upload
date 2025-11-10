@@ -686,7 +686,7 @@ Goal: Generate presigned URLs, track uploads, manage S3 integration.
 **Add to application-dev.properties**:
 ```properties
 # AWS
-aws.region=${AWS_REGION:us-east-1}
+aws.region=${AWS_REGION:us-east-2}
 aws.s3.bucket=${AWS_S3_BUCKET:rapidphoto-dev}
 aws.accessKeyId=${AWS_ACCESS_KEY_ID}
 aws.secretAccessKey=${AWS_SECRET_ACCESS_KEY}

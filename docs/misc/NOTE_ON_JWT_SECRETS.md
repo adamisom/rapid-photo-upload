@@ -325,7 +325,7 @@ echo $JWT_SECRET  # Verify it's set
 # Create .env in project root
 cat > .env << 'EOF'
 JWT_SECRET=your-256-bit-secret-here
-AWS_REGION=us-east-1
+AWS_REGION=us-east-2
 AWS_ACCESS_KEY_ID=your-key
 AWS_SECRET_ACCESS_KEY=your-secret
 AWS_S3_BUCKET=your-bucket

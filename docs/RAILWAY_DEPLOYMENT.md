@@ -45,7 +45,7 @@ git push -u origin main
 
 ```
 JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters-long-change-in-production
-AWS_REGION=us-east-1
+AWS_REGION=us-east-2
 AWS_S3_BUCKET=rapidphotoupload-adamisom
 AWS_ACCESS_KEY_ID=<your-aws-access-key>
 AWS_SECRET_ACCESS_KEY=<your-aws-secret-key>
@@ -80,7 +80,7 @@ railway add
 
 # Set environment variables
 railway variables set JWT_SECRET="your-secret-key-here"
-railway variables set AWS_REGION="us-east-1"
+railway variables set AWS_REGION="us-east-2"
 railway variables set AWS_S3_BUCKET="rapidphotoupload-adamisom"
 railway variables set AWS_ACCESS_KEY_ID="your-key"
 railway variables set AWS_SECRET_ACCESS_KEY="your-secret"

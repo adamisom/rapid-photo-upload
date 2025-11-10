@@ -186,7 +186,7 @@ Two comprehensive testing guides created:
 
 ### Environment Variables (NEW)
 ```bash
-AWS_REGION=us-east-1
+AWS_REGION=us-east-2
 AWS_ACCESS_KEY_ID=<from AWS IAM>
 AWS_SECRET_ACCESS_KEY=<from AWS IAM>
 AWS_S3_BUCKET=<your-bucket-name>

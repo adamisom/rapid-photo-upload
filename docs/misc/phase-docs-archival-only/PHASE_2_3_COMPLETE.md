@@ -327,7 +327,7 @@ Add these to your environment or `.env` file:
 
 ```bash
 # AWS Credentials (from AWS Console)
-AWS_REGION=us-east-1                    # or your region
+AWS_REGION=us-east-2                    # or your region
 AWS_ACCESS_KEY_ID=your_access_key       # Required for Phase 2+
 AWS_SECRET_ACCESS_KEY=your_secret_key   # Required for Phase 2+
 AWS_S3_BUCKET=rapidphotoupload-adamisom       # Your S3 bucket name

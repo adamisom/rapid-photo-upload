@@ -19,7 +19,7 @@ psql -h localhost -U postgres -d rapidphoto_dev -c "SELECT version();"
 ```bash
 export JWT_SECRET="dev-secret-key-at-least-256-bits-long-for-testing"
 export DB_PASSWORD="postgres"
-export AWS_REGION="us-east-1"
+export AWS_REGION="us-east-2"
 export AWS_ACCESS_KEY_ID="your_access_key_here"
 export AWS_SECRET_ACCESS_KEY="your_secret_access_key_here"
 export AWS_S3_BUCKET="rapidphoto-test-bucket"
