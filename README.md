@@ -15,10 +15,24 @@ rapid-photo-upload/
 ├── mobile/               # React Native + Expo (Phase 6)
 │   ├── package.json
 │   └── src/
+├── 100-test-images/      # Test images for upload testing
 ├── docker-compose.yml    # PostgreSQL + services
 ├── .env.example          # Environment variables template
 └── README.md
 ```
+
+## Test Images
+
+The `100-test-images/` folder contains sample images for testing upload functionality:
+- **100 total images** for testing large batch uploads
+- **Most images**: Small ImageNet samples (50-300KB)
+- **12 pexels_* files**: High-resolution photos (1-3MB each) for realistic testing
+
+Use these images to test:
+- Single file uploads
+- Batch uploads (10-20 files)
+- Large session support (100 files)
+- Progress tracking and time estimates
 
 ## Quick Start
 
