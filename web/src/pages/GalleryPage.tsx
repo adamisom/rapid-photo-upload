@@ -11,6 +11,7 @@ export default function GalleryPage() {
   const [photos, setPhotos] = useState<PhotoDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tagErrors, setTagErrors] = useState<Record<string, string>>({});
   const [page, setPage] = useState(0);
   const [totalPhotos, setTotalPhotos] = useState(0);
   const pageSize = 20;
@@ -61,19 +62,26 @@ export default function GalleryPage() {
     const photo = photos.find(p => p.id === photoId);
     if (!photo) return;
 
+    // Clear previous error for this photo
+    setTagErrors(prev => {
+      const updated = { ...prev };
+      delete updated[photoId];
+      return updated;
+    });
+
     // Validate
     if (tag.length > 50) {
-      setError('Tag must be 50 characters or less');
+      setTagErrors(prev => ({ ...prev, [photoId]: 'Tag must be 50 characters or less' }));
       return;
     }
 
     if (photo.tags && photo.tags.length >= 3) {
-      setError('Maximum 3 tags allowed');
+      setTagErrors(prev => ({ ...prev, [photoId]: 'Maximum 3 tags allowed' }));
       return;
     }
 
     if (photo.tags && photo.tags.includes(tag)) {
-      setError('Tag already exists');
+      setTagErrors(prev => ({ ...prev, [photoId]: 'Tag already exists' }));
       return;
     }
 
@@ -87,17 +95,23 @@ export default function GalleryPage() {
       ));
       
       input.value = '';
-      setError(null);
     } catch (err) {
       console.error('Failed to add tag:', err);
       const message = err instanceof Error ? err.message : 'Failed to add tag';
-      setError(message);
+      setTagErrors(prev => ({ ...prev, [photoId]: message }));
     }
   };
 
   const handleRemoveTag = async (photoId: string, tagToRemove: string) => {
     const photo = photos.find(p => p.id === photoId);
     if (!photo) return;
+
+    // Clear error for this photo
+    setTagErrors(prev => {
+      const updated = { ...prev };
+      delete updated[photoId];
+      return updated;
+    });
 
     try {
       const newTags = (photo.tags || []).filter(t => t !== tagToRemove);
@@ -107,12 +121,10 @@ export default function GalleryPage() {
       setPhotos(photos.map(p => 
         p.id === photoId ? { ...p, tags: newTags } : p
       ));
-      
-      setError(null);
     } catch (err) {
       console.error('Failed to remove tag:', err);
       const message = err instanceof Error ? err.message : 'Failed to remove tag';
-      setError(message);
+      setTagErrors(prev => ({ ...prev, [photoId]: message }));
     }
   };
 
@@ -224,6 +236,13 @@ export default function GalleryPage() {
                           <span className="text-xs text-gray-400 italic">No tags</span>
                         )}
                       </div>
+                      
+                      {/* Inline error message */}
+                      {tagErrors[photo.id] && (
+                        <div className="mb-2 px-2 py-1 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                          {tagErrors[photo.id]}
+                        </div>
+                      )}
                       
                       {(!photo.tags || photo.tags.length < 3) && (
                         <form onSubmit={(e) => handleAddTag(e, photo.id)} className="flex gap-1">
