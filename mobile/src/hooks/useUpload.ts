@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { uploadService } from '../services/uploadService';
 
 function uuidv4(): string {
@@ -22,11 +22,57 @@ interface MobileUploadFile {
   error?: string;
 }
 
+export interface UploadBatch {
+  id: string;
+  files: MobileUploadFile[];
+  completedAt: Date;
+}
+
+interface UploadState {
+  activeFiles: MobileUploadFile[];
+  completedBatches: UploadBatch[];
+}
+
 export const useUpload = (maxConcurrent: number = 5) => {
-  const [files, setFiles] = useState<MobileUploadFile[]>([]);
-  const [batchId, setBatchId] = useState<string | null>(null);
+  // Combined state for atomic updates (prevents race conditions)
+  const [uploadState, setUploadState] = useState<UploadState>({
+    activeFiles: [],
+    completedBatches: []
+  });
+  const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [totalProgress, setTotalProgress] = useState(0);
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
+  const [uploadStartTime, setUploadStartTime] = useState<number | null>(null);
+
+  // Recalculate progress during upload (byte-based)
+  useEffect(() => {
+    if (!isUploading) return;
+    
+    const uploadingFiles = uploadState.activeFiles.filter((f) => 
+      f.status === 'uploading' || f.status === 'completed' || f.status === 'pending'
+    );
+    
+    if (uploadingFiles.length === 0) return;
+    
+    // Calculate progress by bytes, not by file count (more accurate for mixed sizes)
+    const totalBytes = uploadingFiles.reduce((sum, f) => sum + f.file.size, 0);
+    const completedBytes = uploadingFiles
+      .filter((f) => f.status === 'completed')
+      .reduce((sum, f) => sum + f.file.size, 0);
+    const progress = totalBytes > 0 ? (completedBytes / totalBytes) * 100 : 0;
+    setTotalProgress(progress);
+    
+    // Calculate ETA
+    const completedCount = uploadingFiles.filter((f) => f.status === 'completed').length;
+    if (uploadStartTime && completedCount > 0) {
+      const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
+      const averageTimePerFile = elapsedSeconds / completedCount;
+      const remainingFiles = uploadingFiles.length - completedCount;
+      const estimatedSeconds = Math.ceil(averageTimePerFile * remainingFiles);
+      setEstimatedTimeRemaining(estimatedSeconds);
+    }
+  }, [uploadState.activeFiles, isUploading, uploadStartTime]);
 
   const addFile = useCallback((file: MobileUploadFile['file']) => {
     const newFile: MobileUploadFile = {
@@ -35,52 +81,92 @@ export const useUpload = (maxConcurrent: number = 5) => {
       status: 'pending',
       progress: 0,
     };
-    setFiles((prev) => [...prev, newFile]);
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: [...prev.activeFiles, newFile]
+    }));
     return newFile.id;
   }, []);
 
   const removeFile = useCallback((fileId: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== fileId));
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: prev.activeFiles.filter((f) => f.id !== fileId)
+    }));
+  }, []);
+
+  const removeAll = useCallback(() => {
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: []
+    }));
+  }, []);
+
+  const retryFile = useCallback((fileId: string) => {
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: prev.activeFiles.map((f) =>
+        f.id === fileId
+          ? { ...f, status: 'pending' as const, progress: 0, error: undefined }
+          : f
+      )
+    }));
+  }, []);
+
+  const clearLastBatch = useCallback(() => {
+    setUploadState((prev) => ({
+      ...prev,
+      completedBatches: prev.completedBatches.slice(1)
+    }));
+  }, []);
+
+  const clearPreviousBatches = useCallback(() => {
+    setUploadState((prev) => ({
+      ...prev,
+      completedBatches: prev.completedBatches.slice(0, 1)
+    }));
   }, []);
 
   const updateFileProgress = useCallback((fileId: string, progress: number) => {
-    setFiles((prev) =>
-      prev.map((f) =>
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: prev.activeFiles.map((f) =>
         f.id === fileId ? { ...f, progress } : f
       )
-    );
-    // Update total progress
-    const updatedFiles = files.map((f) =>
-      f.id === fileId ? { ...f, progress } : f
-    );
-    const totalP = updatedFiles.reduce((sum, f) => sum + f.progress, 0) / updatedFiles.length;
-    setTotalProgress(totalP);
-  }, [files]);
+    }));
+  }, []);
 
   const updateFileStatus = useCallback(
     (fileId: string, status: MobileUploadFile['status'], error?: string) => {
-      setFiles((prev) =>
-        prev.map((f) =>
+      setUploadState((prev) => ({
+        ...prev,
+        activeFiles: prev.activeFiles.map((f) =>
           f.id === fileId ? { ...f, status, error } : f
         )
-      );
+      }));
     },
     []
   );
 
   const startUpload = useCallback(async () => {
-    if (files.length === 0) return;
+    const pendingFiles = uploadState.activeFiles.filter((f) => f.status === 'pending');
+    if (pendingFiles.length === 0) return;
 
     setIsUploading(true);
-    const uploadQueue = [...files];
+    setUploadStartTime(Date.now());
+    setTotalProgress(0);
+    setEstimatedTimeRemaining(null);
+    
+    const uploadQueue = [...pendingFiles];
     const activeUploads = new Set<string>();
+    let localBatchId = currentBatchId || uuidv4();
+    setCurrentBatchId(localBatchId);
 
     try {
-      let currentBatchId = batchId;
-
       for (let i = 0; i < uploadQueue.length; i++) {
         const file = uploadQueue[i];
 
+        // Wait for an available slot
         while (activeUploads.size >= maxConcurrent) {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
@@ -91,21 +177,12 @@ export const useUpload = (maxConcurrent: number = 5) => {
           try {
             updateFileStatus(file.id, 'uploading');
 
-            // Only pass batchId if it already exists (after first file)
-            const batchIdToUse = i === 0 ? undefined : currentBatchId;
-
             const initiateResponse = await uploadService.initiateUpload(
               file.file.name,
               file.file.size,
               file.file.type || 'application/octet-stream',
-              batchIdToUse
+              localBatchId
             );
-
-            // After first file, update batchId with the one from backend
-            if (i === 0 && initiateResponse.batchId && !currentBatchId) {
-              currentBatchId = initiateResponse.batchId;
-              setBatchId(currentBatchId);
-            }
 
             // Read file as ArrayBuffer for S3 upload
             const fileData = await readFileAsArrayBuffer(file.file.uri);
@@ -129,35 +206,83 @@ export const useUpload = (maxConcurrent: number = 5) => {
           }
         })();
       }
+
+      // Wait for all uploads to complete
+      while (activeUploads.size > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
     } finally {
       setIsUploading(false);
+      setUploadStartTime(null);
+      
+      // Move completed files to batch history (only if ALL succeeded)
+      setUploadState((current) => {
+        const completedFilesFromBatch = current.activeFiles.filter((f) =>
+          f.status === 'completed' &&
+          pendingFiles.some((pf) => pf.id === f.id)
+        );
+        
+        const allFilesSucceeded = completedFilesFromBatch.length === pendingFiles.length;
+        
+        // Only create batch if ALL files succeeded
+        const newBatch: UploadBatch | null = allFilesSucceeded && completedFilesFromBatch.length > 0
+          ? {
+              id: localBatchId,
+              files: completedFilesFromBatch,
+              completedAt: new Date()
+            }
+          : null;
+        
+        const newBatches = newBatch
+          ? (current.completedBatches.some(b => b.id === newBatch.id)
+              ? current.completedBatches
+              : [newBatch, ...current.completedBatches])
+          : current.completedBatches;
+        
+        return {
+          // Keep failed files in active, remove completed ones
+          activeFiles: allFilesSucceeded
+            ? current.activeFiles.filter(f =>
+                f.status === 'pending' || f.status === 'uploading'
+              )
+            : current.activeFiles.filter(f =>
+                f.status === 'pending' ||
+                f.status === 'uploading' ||
+                f.status === 'failed' ||
+                (f.status === 'completed' && pendingFiles.some(pf => pf.id === f.id))
+              ),
+          completedBatches: newBatches
+        };
+      });
     }
-  }, [files, batchId, maxConcurrent, updateFileProgress, updateFileStatus]);
-
-  const cancelUpload = useCallback(() => {
-    setFiles([]);
-    setBatchId(null);
-    setTotalProgress(0);
-  }, []);
+  }, [uploadState, currentBatchId, maxConcurrent, updateFileProgress, updateFileStatus]);
 
   const reset = useCallback(() => {
-    setFiles([]);
-    setBatchId(null);
+    setUploadState({
+      activeFiles: [],
+      completedBatches: []
+    });
+    setCurrentBatchId(null);
     setTotalProgress(0);
     setIsUploading(false);
+    setEstimatedTimeRemaining(null);
+    setUploadStartTime(null);
   }, []);
 
   return {
-    files,
-    batchId,
+    files: uploadState.activeFiles,
+    completedBatches: uploadState.completedBatches,
+    currentBatchId,
     isUploading,
     totalProgress,
+    estimatedTimeRemaining,
     addFile,
     removeFile,
-    updateFileProgress,
-    updateFileStatus,
+    removeAll,
+    retryFile,
+    clearLastBatch,
+    clearPreviousBatches,
     startUpload,
-    cancelUpload,
     reset,
   };
 };
@@ -174,4 +299,3 @@ async function readFileAsArrayBuffer(uri: string): Promise<ArrayBuffer> {
     reader.readAsArrayBuffer(blob);
   });
 }
-
