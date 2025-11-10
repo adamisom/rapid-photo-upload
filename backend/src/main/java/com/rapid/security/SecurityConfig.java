@@ -51,11 +51,18 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:3000", "http://localhost:8080"));
+        // Allow local development + Railway deployment + mobile
+        config.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:*",           // Local web dev (5173, 3000, etc.)
+            "https://*.up.railway.app",     // Railway deployments
+            "https://*.netlify.app",        // Netlify web frontend
+            "https://*.vercel.app",         // Vercel web frontend
+            "*"                             // Mobile (Expo) - allows all origins
+        ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(Collections.singletonList("*"));
         config.setExposedHeaders(Arrays.asList("Authorization"));
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(false); // Changed to false for wildcard mobile support
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
