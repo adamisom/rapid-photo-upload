@@ -19,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+/**
+ * COMMAND SERVICE: State-changing operations for uploads
+ * Part of CQRS pattern - handles create, update, delete operations
+ */
 @Service
 public class UploadCommandService {
     
@@ -38,8 +42,8 @@ public class UploadCommandService {
     
     @Transactional
     public InitiateUploadResponse initiateUpload(String userId, InitiateUploadRequest request) {
-        log.info("=== INITIATE UPLOAD START === userId={}, batchId={}, filename={}", 
-            userId, request.getBatchId(), request.getFilename());
+        log.info("Initiate upload: userId={}, batchId={}, filename={}, size={}", 
+            userId, request.getBatchId(), request.getFilename(), request.getFileSizeBytes());
         
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found"));
@@ -47,37 +51,28 @@ public class UploadCommandService {
         // Create or fetch batch
         UploadBatch batch;
         if (request.getBatchId() != null && !request.getBatchId().isEmpty()) {
-            log.info("Looking for existing batch: {}", request.getBatchId());
+            log.debug("Using existing/creating batch: {}", request.getBatchId());
             
             // Atomically insert batch if not exists (PostgreSQL ON CONFLICT)
             // This is safe for concurrent requests - all will succeed
             uploadBatchRepository.insertBatchIfNotExists(request.getBatchId(), userId);
-            log.info("Ensured batch exists (created or was already present): {}", request.getBatchId());
             
             // Now fetch it (guaranteed to exist)
             batch = uploadBatchRepository.findByIdAndUserId(request.getBatchId(), userId)
                 .orElseThrow(() -> new RuntimeException("Batch not found after insert"));
-            log.info("Using batch: {}, current totalCount: {}", batch.getId(), batch.getTotalCount());
         } else {
-            log.info("No batchId provided, creating new batch with auto-generated ID");
+            log.debug("Creating new batch with auto-generated ID");
             // No batchId provided - create new batch with auto-generated ID
             batch = new UploadBatch();
             batch.setId(UUID.randomUUID().toString());
             batch.setUser(user);
             batch.setTotalCount(0);
             batch = uploadBatchRepository.saveAndFlush(batch);
-            log.info("Created new batch: {} (FLUSHED)", batch.getId());
+            log.debug("Created batch: {}", batch.getId());
         }
         
         // Atomically increment total count using database-level update
-        log.info("Incrementing totalCount for batch: {}", batch.getId());
-        try {
-            uploadBatchRepository.incrementTotalCount(batch.getId());
-            log.info("Successfully incremented totalCount for batch: {}", batch.getId());
-        } catch (Exception e) {
-            log.error("FAILED to increment totalCount for batch: {}", batch.getId(), e);
-            throw e;
-        }
+        uploadBatchRepository.incrementTotalCount(batch.getId());
         
         // Generate S3 key BEFORE saving photo (s3_key is NOT NULL)
         String s3Key = userId + "/" + System.currentTimeMillis() + "_" + UUID.randomUUID() + "_" + request.getFilename();
@@ -91,12 +86,11 @@ public class UploadCommandService {
         photo.setS3Key(s3Key);
         photo.setStatus(PhotoStatus.PENDING);
         photo = photoRepository.save(photo);
-        log.info("Created photo: {}", photo.getId());
         
         // Generate presigned URL
         String presignedUrl = s3Service.generatePresignedPutUrl(userId, s3Key);
         
-        log.info("=== INITIATE UPLOAD SUCCESS === photoId={}, batchId={}", photo.getId(), batch.getId());
+        log.info("Upload initiated: photoId={}, batchId={}", photo.getId(), batch.getId());
         
         return new InitiateUploadResponse(
             photo.getId(),
@@ -108,11 +102,14 @@ public class UploadCommandService {
     
     @Transactional
     public void completeUpload(String userId, String photoId, UploadCompleteRequest request) {
+        log.info("Complete upload: userId={}, photoId={}, size={}", userId, photoId, request.getFileSizeBytes());
+        
         Photo photo = photoRepository.findByIdAndUserId(photoId, userId)
             .orElseThrow(() -> new RuntimeException("Photo not found"));
         
         // Verify file exists in S3
         if (!s3Service.verifyFileExists(userId, photo.getS3Key())) {
+            log.error("S3 verification failed: file not found - photoId={}, s3Key={}", photoId, photo.getS3Key());
             photo.setStatus(PhotoStatus.FAILED);
             photo.setErrorMessage("File not found in S3");
             photoRepository.save(photo);
@@ -122,6 +119,8 @@ public class UploadCommandService {
         // Verify file size
         long actualSize = s3Service.getFileSizeBytes(userId, photo.getS3Key());
         if (actualSize != request.getFileSizeBytes()) {
+            log.error("Size mismatch: expected={}, actual={}, photoId={}", 
+                request.getFileSizeBytes(), actualSize, photoId);
             photo.setStatus(PhotoStatus.FAILED);
             photo.setErrorMessage("File size mismatch");
             photoRepository.save(photo);
@@ -136,10 +135,15 @@ public class UploadCommandService {
         UploadBatch batch = photo.getBatch();
         batch.setCompletedCount(batch.getCompletedCount() + 1);
         uploadBatchRepository.save(batch);
+        
+        log.info("Upload completed: photoId={}, batchId={}, completedCount={}", 
+            photoId, batch.getId(), batch.getCompletedCount());
     }
     
     @Transactional
     public void failUpload(String userId, String photoId, String errorMessage) {
+        log.warn("Upload failed: userId={}, photoId={}, error={}", userId, photoId, errorMessage);
+        
         Photo photo = photoRepository.findByIdAndUserId(photoId, userId)
             .orElseThrow(() -> new RuntimeException("Photo not found"));
         
@@ -150,6 +154,8 @@ public class UploadCommandService {
         UploadBatch batch = photo.getBatch();
         batch.setFailedCount(batch.getFailedCount() + 1);
         uploadBatchRepository.save(batch);
+        
+        log.debug("Batch updated: batchId={}, failedCount={}", batch.getId(), batch.getFailedCount());
     }
 }
 

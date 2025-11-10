@@ -123,7 +123,53 @@ VITE_API_URL=http://localhost:8080
 
 ## Testing
 
-### Manual Testing (Postman)
+### Manual Testing (Web UI)
+
+1. Start backend: `cd backend && mvn spring-boot:run`
+2. Start web: `cd web && npm run dev`
+3. Open `http://localhost:5173`
+4. Register and login
+5. Upload test images from `100-test-images/` folder
+
+### Load Testing Script
+
+Test concurrent upload performance with the automated load test:
+
+```bash
+# Run load test with 100 photos × 2MB
+./scripts/load-test.sh
+
+# Run custom load test
+./scripts/load-test.sh 50 1    # 50 photos × 1MB
+./scripts/load-test.sh 200 5   # 200 photos × 5MB
+```
+
+**Requirements**:
+- `jq` installed: `brew install jq`
+- Backend running on `localhost:8080`
+- PostgreSQL and S3 configured
+
+**What it tests**:
+- Concurrent upload initiation (100 presigned URLs in <90s)
+- Parallel S3 uploads (10 at a time)
+- Database integrity (batch status, photo records)
+- End-to-end upload flow
+
+### Database Management
+
+**Clean database before testing**:
+
+```bash
+# Delete all photos and batches (keeps users)
+./backend/scripts/delete-all-photos.sh
+```
+
+This is useful when you want to:
+- Start fresh for a new load test
+- Clear test data
+- Reset upload counts
+
+### API Testing (Postman/curl)
 
 1. Register user: `POST /api/auth/register`
 2. Login: `POST /api/auth/login`
@@ -131,10 +177,6 @@ VITE_API_URL=http://localhost:8080
 4. Complete upload: `POST /api/upload/complete/{photoId}`
 5. Poll status: `GET /api/upload/batch/{batchId}/status`
 6. List photos: `GET /api/photos`
-
-### Load Testing
-
-Upload 100 concurrent files and verify completion within 90 seconds.
 
 ## Technology Stack
 
