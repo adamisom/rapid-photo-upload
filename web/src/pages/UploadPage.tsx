@@ -309,6 +309,11 @@ export default function UploadPage() {
             {/* Upload Button */}
             {!isUploading && (
               <div className="space-y-3">
+                {files.length >= 6 && (
+                  <p className="text-xs text-center text-gray-500 bg-blue-50 border border-blue-100 rounded-lg py-2 px-3">
+                    💡 Tip: Large batches upload 5 files at a time for optimal performance
+                  </p>
+                )}
                 <button
                   onClick={startUpload}
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:from-blue-800 active:to-indigo-800 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
@@ -318,11 +323,6 @@ export default function UploadPage() {
                   </svg>
                   <span>Start Upload ({files.length} file{files.length !== 1 ? 's' : ''})</span>
                 </button>
-                {files.length >= 50 && (
-                  <p className="text-xs text-center text-gray-500">
-                    💡 Tip: Large batches upload {Math.min(5, files.length)} files at a time for optimal performance
-                  </p>
-                )}
               </div>
             )}
 
