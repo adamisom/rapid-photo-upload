@@ -264,16 +264,34 @@ export default function UploadScreen() {
 
       {/* Previous Batches */}
       {previousBatches.length > 0 && (
-        <View style={styles.batchSection}>
+        <View style={styles.previousBatchesContainer}>
           <View style={styles.batchHeader}>
             <Text style={styles.sectionTitle}>Previous Batches ({previousBatches.length})</Text>
             <TouchableOpacity onPress={clearPreviousBatches}>
               <Text style={styles.clearBatchText}>Clear All</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.batchSubtext}>
-            {previousBatches.reduce((sum, b) => sum + b.files.length, 0)} files total
-          </Text>
+          
+          {previousBatches.map((batch, index) => (
+            <View key={batch.id} style={styles.batchSection}>
+              <Text style={styles.batchSubtext}>
+                Batch {previousBatches.length - index} • {batch.files.length} file{batch.files.length !== 1 ? 's' : ''}
+              </Text>
+              <FlatList
+                data={batch.files}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <View style={styles.batchFileItem}>
+                    <Text style={styles.fileName} numberOfLines={1}>
+                      {item.file.name}
+                    </Text>
+                    <Text style={styles.statusCompleted}>✓</Text>
+                  </View>
+                )}
+                scrollEnabled={false}
+              />
+            </View>
+          ))}
         </View>
       )}
 
@@ -453,6 +471,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
+  },
+  previousBatchesContainer: {
+    marginTop: 20,
   },
   batchHeader: {
     flexDirection: 'row',
