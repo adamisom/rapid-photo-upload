@@ -12,9 +12,36 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tagErrors, setTagErrors] = useState<Record<string, string>>({});
+  const [tagInput, setTagInput] = useState<Record<string, string>>({});
+  const [showSuggestions, setShowSuggestions] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState(0);
   const [totalPhotos, setTotalPhotos] = useState(0);
   const pageSize = 20;
+
+  // Get all unique tags from user's photos for autocomplete
+  const getAllUserTags = (): string[] => {
+    const tagSet = new Set<string>();
+    photos.forEach(photo => {
+      photo.tags?.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  };
+
+  // Get filtered tag suggestions based on input
+  const getTagSuggestions = (photoId: string): string[] => {
+    const input = (tagInput[photoId] || '').toLowerCase().trim();
+    if (!input) return [];
+
+    const photo = photos.find(p => p.id === photoId);
+    const existingTags = photo?.tags || [];
+    
+    return getAllUserTags()
+      .filter(tag => 
+        tag.toLowerCase().includes(input) && 
+        !existingTags.includes(tag)
+      )
+      .slice(0, 5); // Show max 5 suggestions
+  };
 
   useEffect(() => {
     void loadPhotos();
@@ -53,9 +80,7 @@ export default function GalleryPage() {
 
   const handleAddTag = async (e: React.FormEvent, photoId: string) => {
     e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const input = form.querySelector('input') as HTMLInputElement;
-    const tag = input.value.trim();
+    const tag = (tagInput[photoId] || '').trim();
 
     if (!tag) return;
 
@@ -94,12 +119,21 @@ export default function GalleryPage() {
         p.id === photoId ? { ...p, tags: newTags } : p
       ));
       
-      input.value = '';
+      // Clear input and hide suggestions
+      setTagInput(prev => ({ ...prev, [photoId]: '' }));
+      setShowSuggestions(prev => ({ ...prev, [photoId]: false }));
     } catch (err) {
       console.error('Failed to add tag:', err);
       const message = err instanceof Error ? err.message : 'Failed to add tag';
       setTagErrors(prev => ({ ...prev, [photoId]: message }));
     }
+  };
+
+  const selectSuggestion = (photoId: string, tag: string) => {
+    setTagInput(prev => ({ ...prev, [photoId]: tag }));
+    setShowSuggestions(prev => ({ ...prev, [photoId]: false }));
+    // Auto-submit
+    handleAddTag({ preventDefault: () => {} } as React.FormEvent, photoId);
   };
 
   const handleRemoveTag = async (photoId: string, tagToRemove: string) => {
@@ -245,27 +279,56 @@ export default function GalleryPage() {
                       )}
                       
                       {(!photo.tags || photo.tags.length < 3) && (
-                        <form onSubmit={(e) => handleAddTag(e, photo.id)} className="flex gap-1">
-                          <input
-                            type="text"
-                            maxLength={50}
-                            placeholder="Add tag..."
-                            className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddTag(e as unknown as React.FormEvent, photo.id);
-                              }
-                            }}
-                          />
-                          <button
-                            type="submit"
-                            className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
-                            title="Add tag"
-                          >
-                            +
-                          </button>
-                        </form>
+                        <div className="relative">
+                          <form onSubmit={(e) => handleAddTag(e, photo.id)} className="flex gap-1">
+                            <input
+                              type="text"
+                              maxLength={50}
+                              placeholder="Add tag..."
+                              value={tagInput[photo.id] || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setTagInput(prev => ({ ...prev, [photo.id]: value }));
+                                setShowSuggestions(prev => ({ ...prev, [photo.id]: value.length > 0 }));
+                              }}
+                              onBlur={() => {
+                                // Delay to allow click on suggestion
+                                setTimeout(() => {
+                                  setShowSuggestions(prev => ({ ...prev, [photo.id]: false }));
+                                }, 200);
+                              }}
+                              onFocus={() => {
+                                if ((tagInput[photo.id] || '').length > 0) {
+                                  setShowSuggestions(prev => ({ ...prev, [photo.id]: true }));
+                                }
+                              }}
+                              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            <button
+                              type="submit"
+                              className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                              title="Add tag"
+                            >
+                              +
+                            </button>
+                          </form>
+                          
+                          {/* Tag suggestions dropdown */}
+                          {showSuggestions[photo.id] && getTagSuggestions(photo.id).length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-10 max-h-32 overflow-y-auto">
+                              {getTagSuggestions(photo.id).map((suggestion, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => selectSuggestion(photo.id, suggestion)}
+                                  className="w-full text-left px-2 py-1.5 text-xs hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                                >
+                                  {suggestion}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
 
