@@ -13,7 +13,7 @@ export const authService = {
 
   login: async (email: string, password: string): Promise<AuthResponse> => {
     try {
-      console.log('📡 Sending login request...');
+      console.log('📡 Sending login request to:', apiClient.defaults.baseURL);
       const request: LoginRequest = { email, password };
       const response = await apiClient.post<AuthResponse>('/api/auth/login', request);
       console.log('✅ Login response received');
@@ -26,6 +26,8 @@ export const authService = {
         code: error.code,
         response: error.response?.data,
         status: error.response?.status,
+        baseURL: apiClient.defaults.baseURL,
+        url: error.config?.url,
       });
       throw error;
     }
