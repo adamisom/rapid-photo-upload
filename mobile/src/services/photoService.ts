@@ -12,5 +12,9 @@ export const photoService = {
   deletePhoto: async (photoId: string): Promise<void> => {
     await apiClient.delete(`/api/photos/${photoId}`);
   },
+
+  updateTags: async (photoId: string, tags: string[]): Promise<void> => {
+    await apiClient.put(`/api/photos/${photoId}/tags`, { tags });
+  },
 };
 

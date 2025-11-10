@@ -48,6 +48,7 @@ export interface Photo {
   fileSizeBytes: number;
   uploadedAt: string;
   downloadUrl: string;
+  tags: string[];
 }
 
 export interface PhotoListResponse {

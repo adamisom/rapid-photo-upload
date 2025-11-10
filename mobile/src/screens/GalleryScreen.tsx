@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Linking, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { photoService } from '../services/photoService';
 import type { Photo, PhotoListResponse } from '../types';
+import { formatFileSize } from '../utils/formatters';
 
 export default function GalleryScreen() {
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -11,6 +12,8 @@ export default function GalleryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalPhotos, setTotalPhotos] = useState(0);
+  const [tagInput, setTagInput] = useState<{ [key: string]: string }>({});
+  const [tagErrors, setTagErrors] = useState<{ [key: string]: string }>({});
   const pageSize = 20;
 
   const loadPhotos = useCallback(async () => {
@@ -88,6 +91,66 @@ export default function GalleryScreen() {
     }
   }, [page]);
 
+  const handleAddTag = useCallback(async (photoId: string, tagToAdd?: string) => {
+    const photo = photos.find((p) => p.id === photoId);
+    if (!photo) return;
+
+    const tag = (tagToAdd || tagInput[photoId] || '').trim();
+    
+    // Validation
+    if (!tag) {
+      setTagErrors((prev) => ({ ...prev, [photoId]: 'Tag cannot be empty' }));
+      return;
+    }
+    if (tag.length > 50) {
+      setTagErrors((prev) => ({ ...prev, [photoId]: 'Tag must be 50 characters or less' }));
+      return;
+    }
+    if (photo.tags && photo.tags.length >= 3) {
+      setTagErrors((prev) => ({ ...prev, [photoId]: 'Maximum 3 tags allowed' }));
+      return;
+    }
+    if (photo.tags && photo.tags.includes(tag)) {
+      setTagErrors((prev) => ({ ...prev, [photoId]: 'Tag already exists' }));
+      return;
+    }
+
+    try {
+      const newTags = [...(photo.tags || []), tag];
+      await photoService.updateTags(photoId, newTags);
+      
+      // Update local state
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === photoId ? { ...p, tags: newTags } : p))
+      );
+      
+      // Clear input and error
+      setTagInput((prev) => ({ ...prev, [photoId]: '' }));
+      setTagErrors((prev) => ({ ...prev, [photoId]: '' }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to add tag';
+      setTagErrors((prev) => ({ ...prev, [photoId]: message }));
+    }
+  }, [photos, tagInput]);
+
+  const handleRemoveTag = useCallback(async (photoId: string, tagToRemove: string) => {
+    const photo = photos.find((p) => p.id === photoId);
+    if (!photo || !photo.tags) return;
+
+    try {
+      const newTags = photo.tags.filter((t) => t !== tagToRemove);
+      await photoService.updateTags(photoId, newTags);
+      
+      // Update local state
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === photoId ? { ...p, tags: newTags } : p))
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to remove tag';
+      Alert.alert('Error', message);
+    }
+  }, [photos]);
+
   if (loading && photos.length === 0) {
     return (
       <View style={styles.container}>
@@ -130,8 +193,57 @@ export default function GalleryScreen() {
                   {item.originalFilename}
                 </Text>
                 <Text style={styles.photoSize}>
-                  {(item.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB
+                  {formatFileSize(item.fileSizeBytes)}
                 </Text>
+                
+                {/* Tags Section */}
+                <View style={styles.tagsSection}>
+                  <View style={styles.tagsContainer}>
+                    {item.tags && item.tags.length > 0 ? (
+                      item.tags.map((tag, idx) => (
+                        <View key={idx} style={styles.tag}>
+                          <Text style={styles.tagText}>{tag}</Text>
+                          <TouchableOpacity onPress={() => handleRemoveTag(item.id, tag)}>
+                            <Text style={styles.tagRemove}>×</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.noTags}>No tags</Text>
+                    )}
+                  </View>
+                  
+                  {/* Error message */}
+                  {tagErrors[item.id] && (
+                    <Text style={styles.tagError}>{tagErrors[item.id]}</Text>
+                  )}
+                  
+                  {/* Add tag input */}
+                  {(!item.tags || item.tags.length < 3) && (
+                    <View style={styles.tagInputContainer}>
+                      <TextInput
+                        style={styles.tagInput}
+                        placeholder="Add tag..."
+                        maxLength={50}
+                        value={tagInput[item.id] || ''}
+                        onChangeText={(text) => {
+                          setTagInput((prev) => ({ ...prev, [item.id]: text }));
+                          if (tagErrors[item.id]) {
+                            setTagErrors((prev) => ({ ...prev, [item.id]: '' }));
+                          }
+                        }}
+                        onSubmitEditing={() => handleAddTag(item.id)}
+                      />
+                      <TouchableOpacity
+                        style={styles.tagAddButton}
+                        onPress={() => handleAddTag(item.id)}
+                      >
+                        <Text style={styles.tagAddButtonText}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+                
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => handleDelete(item.id, item.originalFilename)}
@@ -244,6 +356,72 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     fontSize: 11,
     color: '#999',
+    marginBottom: 8,
+  },
+  tagsSection: {
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 6,
+    minHeight: 24,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  tagText: {
+    fontSize: 10,
+    color: '#1976d2',
+    marginRight: 4,
+  },
+  tagRemove: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: 'bold',
+  },
+  noTags: {
+    fontSize: 10,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  tagError: {
+    fontSize: 10,
+    color: '#cc0000',
+    marginBottom: 4,
+  },
+  tagInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tagInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 11,
+    marginRight: 4,
+  },
+  tagAddButton: {
+    backgroundColor: '#0066cc',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  tagAddButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   deleteButton: {
     backgroundColor: '#cc0000',
