@@ -45,17 +45,21 @@ export default function LoginPage() {
       authService.setAuthToken(response.token, response.userId, response.email);
       refreshAuth(); // Tell AuthContext to refresh from localStorage
       navigate('/upload');
-    } catch (err: any) {
+    } catch (err: unknown) {
       let message = 'Login failed. Please check your credentials.';
       
-      if (err.response?.data?.message) {
-        message = err.response.data.message;
-      } else if (err.message) {
-        message = err.message;
+      if (err && typeof err === 'object' && 'response' in err) {
+        const error = err as { response?: { data?: { message?: string } }; message?: string };
+        if (error.response?.data?.message) {
+          message = error.response.data.message;
+        } else if (error.message) {
+          message = error.message;
+        }
       }
       
       // Check for network errors
-      if (message.includes('Failed to fetch') || message.includes('Network') || err.code === 'ERR_NETWORK') {
+      const errCode = err && typeof err === 'object' && 'code' in err ? (err as { code?: string }).code : undefined;
+      if (message.includes('Failed to fetch') || message.includes('Network') || errCode === 'ERR_NETWORK') {
         message = 'Cannot connect to server. Is the backend running on http://localhost:8080?';
       }
       

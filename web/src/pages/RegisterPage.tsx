@@ -54,25 +54,34 @@ export default function RegisterPage() {
       authService.setAuthToken(response.token, response.userId, response.email);
       refreshAuth(); // Tell AuthContext to refresh from localStorage
       navigate('/upload');
-    } catch (err: any) {
+    } catch (err: unknown) {
       let message = 'Registration failed. Please try again.';
       
       // Extract message from axios error structure
-      if (err.response?.data?.message) {
-        message = err.response.data.message;
-      } else if (err.response?.data) {
-        message = typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data);
-      } else if (err.message) {
-        message = err.message;
-      }
-      
-      // Check for specific cases
-      if (message.includes('Email already exists') || message.includes('already exists')) {
-        setInfo('This email is already registered. Please login instead.');
-      } else if (message.includes('Failed to fetch') || message.includes('Network') || err.code === 'ERR_NETWORK') {
-        setError('Cannot connect to server. Is the backend running on http://localhost:8080?');
-      } else if (err.response?.status === 400) {
-        setError(message || 'Invalid email or password. Password must be at least 8 characters.');
+      if (err && typeof err === 'object') {
+        const error = err as { response?: { data?: { message?: string } | string; status?: number }; message?: string; code?: string };
+        if ('response' in error && error.response?.data) {
+          if (typeof error.response.data === 'string') {
+            message = error.response.data;
+          } else if (error.response.data.message) {
+            message = error.response.data.message;
+          } else {
+            message = JSON.stringify(error.response.data);
+          }
+        } else if ('message' in error && error.message) {
+          message = error.message;
+        }
+        
+        // Check for specific cases
+        if (message.includes('Email already exists') || message.includes('already exists')) {
+          setInfo('This email is already registered. Please login instead.');
+        } else if (message.includes('Failed to fetch') || message.includes('Network') || ('code' in error && error.code === 'ERR_NETWORK')) {
+          setError('Cannot connect to server. Is the backend running on http://localhost:8080?');
+        } else if ('response' in error && error.response?.status === 400) {
+          setError(message || 'Invalid email or password. Password must be at least 8 characters.');
+        } else {
+          setError(message);
+        }
       } else {
         setError(message);
       }
