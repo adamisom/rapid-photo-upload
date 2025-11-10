@@ -1,36 +1,59 @@
 # RapidPhotoUpload - Quick Start Guide
 
+## 📚 **Essential Documentation**
+
+Before getting started, review these focused guides:
+- **[ARCHITECTURE_DETAILS.md](misc/ARCHITECTURE_DETAILS.md)** - DDD, CQRS, VSA patterns
+- **[TECHNICAL_WRITEUP.md](misc/TECHNICAL_WRITEUP.md)** - Design decisions and system architecture
+- **[AI_TOOLS_USED.md](misc/AI_TOOLS.md)** - Development process story
+
+---
+
 ## Project Status
 
-✅ **Phase 1: Backend Foundation** - Complete
+✅ **All Phases Complete** - Production-ready system with web + mobile clients
+
+✅ **Phase 1: Backend Foundation**
 - Spring Boot 3.4.0 backend with JWT authentication
 - Domain entities (User, Photo, UploadBatch) with JPA
-- Repositories and exception handling
+- DDD, CQRS, and Vertical Slice Architecture
 - Auth endpoints: `/api/auth/register`, `/api/auth/login`
 
-✅ **Phase 2: S3 Integration & Upload API** - Complete
+✅ **Phase 2: S3 Integration & Upload API**
 - AWS S3 presigned URLs for client-side uploads
 - Upload workflow: initiate → upload to S3 → complete
 - Batch tracking with status polling
-- Endpoints: `/api/upload/initiate`, `//complete`, `/status`
+- Atomic batch creation (`ON CONFLICT DO NOTHING`)
 
-✅ **Phase 3: Photo Query API** - Complete
+✅ **Phase 3: Photo Query API**
 - Photo listing with pagination
 - Presigned download URLs
+- Photo tagging (max 3 tags, autocomplete)
 - Photo deletion with S3 cleanup
-- Endpoints: `GET/DELETE /api/photos`
 
-✅ **Phase 4: Web Frontend** - Complete
+✅ **Phase 4-5: Web Frontend**
 - React 19 + TypeScript + Tailwind SPA
-- Authentication: Login, Register, Protected routes
-- Upload UI: Drag-drop, file selection, progress tracking
-- S3 integration: Direct uploads with presigned URLs
-- Responsive design with Tailwind CSS
+- Upload UI: Drag-drop, progress tracking, ETA, retry failed uploads
+- Gallery: Photo grid, tagging with autocomplete, download, delete
+- Batch history and concurrency management (5 files at a time)
 
-**Backend Build Status**: ✅ 34 source files, 71MB JAR, 0 compilation errors  
-**Frontend Build Status**: ✅ 104 modules, 282 KB JS (91 KB gzipped), 0 errors
+✅ **Phase 6: Mobile Frontend**
+- React Native + Expo
+- Same features as web (upload, gallery, tagging, auth)
+- Expo Go compatible for easy testing
 
-🚀 **Next**: Run tests using TESTING_GUIDE.md or start frontend with `npm run dev`
+✅ **Phase 7: Testing & Documentation**
+- Load test script (100 concurrent uploads verified)
+- Comprehensive architecture documentation
+- DDD/CQRS/VSA patterns explained
+- AI collaboration process documented
+
+**Build Status**: 
+- Backend: ✅ 34 source files, 71MB JAR, 0 compilation errors
+- Web: ✅ TypeScript clean, 0 lint errors
+- Mobile: ✅ Expo compatible, ready for app store builds
+
+🚀 **Next**: Follow setup instructions below or jump to [TESTING_GUIDE.md](misc/TESTING_GUIDE.md)
 
 ---
 
@@ -80,14 +103,21 @@
 
 ```
 rapid-photo-upload/
-├── backend/              ← Phase 1-3: Backend API (currently here)
-├── web/                  ← Phase 4-5: React frontend (empty)
-├── mobile/               ← Phase 6: React Native (empty)
-├── IMPLEMENTATION_TASK_GUIDE.md  ← Detailed subtasks
-├── README.md
-├── QUICK_START.md        ← You are here
-├── docker-compose.yml    ← PostgreSQL setup
-└── env.example
+├── backend/              # Java Spring Boot API (Phases 1-3)
+├── web/                  # React + Vite frontend (Phases 4-5)
+├── mobile/               # React Native + Expo (Phase 6)
+├── 100-test-images/      # Test images for upload testing
+├── scripts/              # Load test and database management scripts
+├── docs/
+│   ├── ARCHITECTURE.md                # Complete system architecture
+│   ├── QUICK_START.md                 # You are here
+│   └── misc/
+│       ├── TESTING_GUIDE.md           # Comprehensive testing guide
+│       ├── ARCHITECTURE_DETAILS.md    # DDD/CQRS/VSA explained
+│       ├── TECHNICAL_WRITEUP.md       # Design decisions
+│       └── AI_TOOLS_USED.md           # Development process
+├── docker-compose.yml    # PostgreSQL setup
+└── .env.example          # Environment variables template
 ```
 
 ---
@@ -179,13 +209,14 @@ Detailed specifications are in `IMPLEMENTATION_TASK_GUIDE.md`.
 
 | Phase | Status | Details |
 |-------|--------|---------|
-| 1: Backend Foundation | ✅ Complete | Auth, domain entities, repositories, exception handling |
-| 2: S3 Integration | ✅ Complete | Presigned URLs, upload workflow, batch tracking |
-| 3: Photo Query API | ✅ Complete | Listing, pagination, downloads, deletion |
-| 4: Web Frontend | ⏳ Pending | React SPA |
-| 5: Mobile App | ⏳ Pending | React Native |
+| 1: Backend Foundation | ✅ Complete | Auth, domain entities (DDD), CQRS services |
+| 2: S3 Integration | ✅ Complete | Presigned URLs, atomic batch creation |
+| 3: Photo Query API | ✅ Complete | Listing, pagination, tagging, deletion |
+| 4-5: Web Frontend | ✅ Complete | React SPA with upload + gallery |
+| 6: Mobile App | ✅ Complete | React Native + Expo |
+| 7: Testing & Docs | ✅ Complete | Load tests, architecture docs |
 
-**To test Phase 2 & 3**: Follow TESTING_GUIDE.md after backend is running.
+**To test**: Follow [TESTING_GUIDE.md](misc/TESTING_GUIDE.md)
 
 ---
 

@@ -2,7 +2,16 @@
 
 Comprehensive reference for testing RapidPhotoUpload across all implementation phases.
 
-**Current Status**: Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅ | Phase 5 ✅ | Phase 6 ✅ | Phase 7 ✅
+**Current Status**: All Phases Complete ✅ (Backend + Web + Mobile + Load Testing + Documentation)
+
+---
+
+## 📚 **Quick Links to Documentation**
+
+Before testing, review these focused guides:
+- **[ARCHITECTURE_DETAILS.md](ARCHITECTURE_DETAILS.md)** - DDD, CQRS, VSA patterns explained
+- **[TECHNICAL_WRITEUP.md](TECHNICAL_WRITEUP.md)** - Design decisions and system architecture
+- **[AI_TOOLS_USED.md](AI_TOOLS_USED.md)** - Development process and bugs fixed
 
 ---
 
@@ -425,15 +434,35 @@ npm run dev
 
 ### 4. Test Upload Flow
 1. On /upload page:
-   - Drag a test image file, or
+   - Drag test image files, or
    - Click drop zone to browse
-2. Select 2-3 image files
+2. Select 2-3 image files from `100-test-images/` folder
 3. See file list with progress bars
 4. Click "Start Upload"
-5. Watch progress (0-100% per file)
-6. Expected: All files complete (or show backend errors if server not running)
+5. Watch progress (byte-based % with ETA)
+6. Expected: All files complete with success banner
 
-### 5. Verify Quality
+### 5. Test Photo Tagging (NEW)
+1. Go to http://localhost:5173/gallery
+2. Select a photo
+3. Add tags:
+   - Type tag name (max 50 chars)
+   - See autocomplete suggestions from your existing tags
+   - Click "+" or press Enter
+   - Max 3 tags per photo
+4. Remove tags:
+   - Click ✕ on any tag badge
+5. Test validation:
+   - Try adding 4th tag → See inline error
+   - Try empty tag → See inline error
+
+### 6. Test Upload Features
+1. **Batch History**: Upload files → See "Last Batch" section appear
+2. **Retry Failed**: Stop backend mid-upload → Click retry button on failed files
+3. **Remove All**: Select 10 files → Click "Remove All" button
+4. **Concurrency Tip**: Select 6+ files → See tip above "Start Upload" button
+
+### 7. Verify Quality
 ```bash
 npm run type-check  # Should pass
 npm run lint        # Should pass
@@ -455,14 +484,18 @@ npm run build       # Should build successfully
 1. Click "Gallery" in header navigation
 2. Should see photo grid (responsive 2-3 columns)
 3. Photos display thumbnails
-4. See filename and file size below each photo
+4. See filename, file size, and tags below each photo
 
 ### 3. Test Photo Actions
 1. **Download**: Click photo → Opens in new tab
-2. **Delete**: Click delete button → Shows confirmation dialog
+2. **Tagging**: 
+   - Add up to 3 tags per photo
+   - Autocomplete suggests existing tags
+   - Inline validation errors
+3. **Delete**: Click delete button → Shows confirmation dialog
    - Click "Cancel" → Dialog closes, photo remains
    - Click "Delete" → Photo deleted, list updates
-3. **Pagination**: If > 20 photos, test Previous/Next buttons
+4. **Pagination**: If > 20 photos, test Previous/Next buttons
 
 ### 4. Test Error Handling
 1. Stop backend: `Ctrl+C` in backend terminal
@@ -485,21 +518,34 @@ npm test            # Run unit tests
 ## Prerequisites for Mobile Testing
 
 1. **Expo Go app** on iPhone (download from App Store)
-2. **Backend running**: `cd backend && ./mvnw spring-boot:run`
-3. **Mac & iPhone on same WiFi**
-4. **Environment configured**: See `PHASE_6_ENV_SETUP.md`
+2. **Backend running**: `cd backend && mvn spring-boot:run`
+3. **Mac & iPhone on same WiFi** (or use tunnel mode)
 
 ---
 
 ## Quick Mobile Smoke Test (5 minutes with Expo Go)
 
 ### Step 1: Setup Environment
+
+**Option A: Same WiFi (Recommended)**
+```bash
+# Find your Mac's IP address
+ifconfig | grep "inet " | grep -v 127.0.0.1
+
+cd mobile
+
+# Create .env file
+cat > .env << EOF
+EXPO_PUBLIC_API_BASE_URL=http://YOUR_MAC_IP:8080
+EOF
+# Replace YOUR_MAC_IP with actual IP (e.g., 192.168.1.100)
+```
+
+**Option B: Tunnel Mode (Works anywhere)**
 ```bash
 cd mobile
-touch .env  # Create if not exists
-# Add to .env:
-# EXPO_PUBLIC_API_BASE_URL=http://192.168.1.YOUR_IP:8080
-# (Replace YOUR_IP with your Mac's IP from: ifconfig | grep inet)
+npm run start:tunnel
+# No .env needed - creates public tunnel
 ```
 
 ### Step 2: Start Dev Server
@@ -594,7 +640,43 @@ npm start
 
 ---
 
-# PHASE 7: Production Readiness
+# PHASE 7: Load Testing & Production Readiness
+
+## Automated Load Test Script
+
+Test system performance with 100 concurrent uploads:
+
+```bash
+# Clean database first
+./backend/scripts/delete-all-photos.sh
+
+# Run load test (100 photos × 2MB)
+./scripts/load-test.sh
+
+# Custom load test
+./scripts/load-test.sh 50 1    # 50 photos × 1MB
+./scripts/load-test.sh 200 5   # 200 photos × 5MB
+```
+
+**Requirements**:
+- `jq` installed: `brew install jq`
+- Backend running on `localhost:8080`
+- PostgreSQL and S3 configured
+
+**What it tests**:
+- 10 concurrent upload initiations (100 presigned URLs in <90s)
+- Parallel S3 uploads (10 at a time)
+- Database integrity (batch status, photo records)
+- End-to-end upload flow
+- Atomic batch creation (no race conditions)
+
+**Expected Results**:
+- ✅ All 100 photos uploaded successfully
+- ✅ Batch status shows correct counts
+- ✅ All files exist in S3
+- ✅ Total time: 20-40 seconds (depends on network)
+
+---
 
 ## Pre-Deployment Checklist
 
