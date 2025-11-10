@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, Alert, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useUpload, type UploadBatch } from '../hooks/useUpload';
+import { useUpload } from '../hooks/useUpload';
 import ProgressBar from '../components/ProgressBar';
 import { formatFileSize, formatTimeRemaining } from '../utils/formatters';
 
@@ -19,8 +19,7 @@ export default function UploadScreen() {
     retryFile,
     clearLastBatch,
     clearPreviousBatches,
-    startUpload, 
-    reset 
+    startUpload
   } = useUpload();
 
   // Derive lastBatch and previousBatches
@@ -74,14 +73,6 @@ export default function UploadScreen() {
     },
     [removeFile]
   );
-
-  const handleClear = useCallback(() => {
-    if (isUploading) {
-      Alert.alert('Upload In Progress', 'Cannot clear files while uploading');
-      return;
-    }
-    reset();
-  }, [isUploading, reset]);
 
   return (
     <ScrollView style={styles.container}>
@@ -248,7 +239,7 @@ export default function UploadScreen() {
       {files.length === 0 && !lastBatch && !isUploading && (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>No photos selected</Text>
-          <Text style={styles.emptySubtext}>Tap "Select Photos" to get started</Text>
+          <Text style={styles.emptySubtext}>Tap &quot;Select Photos&quot; to get started</Text>
         </View>
       )}
     </ScrollView>
