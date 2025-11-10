@@ -4,6 +4,29 @@ A production-ready, AI-assisted monorepo featuring concurrent multi-file uploads
 
 ---
 
+## 🚀 **Live Production Deployment**
+
+**The app is deployed and running on Railway!**
+
+| Service | URL | Status |
+|---------|-----|--------|
+| **Backend API** | https://rapid-photo-upload-production.up.railway.app | ✅ Live |
+| **Web Frontend** | https://web-frontend-rapid-photo-upload-production.up.railway.app | ✅ Live |
+| **Database** | Railway PostgreSQL | ✅ Running |
+| **Storage** | AWS S3 (us-east-2) | ✅ Connected |
+
+**Try it now:** Visit the web frontend to register, login, and upload photos!
+
+**Tech Stack:**
+- Backend: Java 17 + Spring Boot 3 + PostgreSQL
+- Frontend: React 18 + TypeScript + Vite
+- Mobile: React Native + Expo
+- Cloud: Railway (hosting) + AWS S3 (storage)
+
+**Deployment Guide:** See [docs/misc/RAILWAY_DEPLOYMENT.md](docs/misc/RAILWAY_DEPLOYMENT.md) for full deployment instructions.
+
+---
+
 ## ⚠️ **AWS Cost Control - Built-In Limits**
 
 **To prevent runaway AWS bills, the following hard limits are enforced:**
