@@ -166,7 +166,8 @@ echo "  Phase 3: Initiate Uploads (Request Presigned URLs)"
 echo "==================================================================="
 echo ""
 
-INITIATE_START=$(date +%s%N)
+INITIATE_START=$(date +%s)
+INITIATE_START_NS=$(date +%s%N)
 log_info "Requesting $NUM_PHOTOS presigned URLs..."
 
 # Store photo metadata in arrays
@@ -204,9 +205,10 @@ done
 
 echo ""
 
-INITIATE_END=$(date +%s%N)
-INITIATE_MS=$(echo "scale=2; ($INITIATE_END - $INITIATE_START) / 1000000" | bc)
-INITIATE_SECONDS=$(echo "scale=2; $INITIATE_MS / 1000" | bc)
+INITIATE_END=$(date +%s)
+INITIATE_END_NS=$(date +%s%N)
+INITIATE_MS=$(echo "scale=2; ($INITIATE_END_NS - $INITIATE_START_NS) / 1000000" | bc)
+INITIATE_SECONDS=$(echo "scale=2; ($INITIATE_END - $INITIATE_START)" | bc)
 
 if [ $FAILED_INITIATIONS -gt 0 ]; then
     log_warn "$FAILED_INITIATIONS initiations failed"
@@ -358,7 +360,7 @@ echo "  Load Test Results"
 echo "==================================================================="
 echo ""
 
-TOTAL_DURATION=$((UPLOAD_END - INITIATE_START / 1000000000))
+TOTAL_DURATION=$((UPLOAD_END - INITIATE_START))
 
 echo "Configuration:"
 echo "  • Photos: $NUM_PHOTOS × $PHOTO_SIZE_MB MB = $((NUM_PHOTOS * PHOTO_SIZE_MB)) MB total"
@@ -387,8 +389,8 @@ if [ $UPLOAD_FAIL_COUNT -gt 0 ]; then
     PASS=false
 fi
 
-if [ "$INITIATE_SECONDS" != "0" ]; then
-    INITIATE_SEC_NUMERIC=$(echo "$INITIATE_SECONDS" | awk '{print int($1+0.5)}')
+if [ "$INITIATE_SECONDS" != "0" ] && [ "$INITIATE_SECONDS" != "" ]; then
+    INITIATE_SEC_NUMERIC=$(printf "%.0f" "$INITIATE_SECONDS")
     if [ "$INITIATE_SEC_NUMERIC" -gt 90 ]; then
         log_warn "Initiation took longer than 90 seconds"
         PASS=false

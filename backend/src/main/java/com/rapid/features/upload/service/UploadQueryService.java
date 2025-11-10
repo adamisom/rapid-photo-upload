@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +30,7 @@ public class UploadQueryService {
     @Autowired
     private PhotoRepository photoRepository;
     
+    @Transactional(readOnly = true)
     public BatchStatusResponse getBatchStatus(String userId, String batchId) {
         log.debug("Query batch status: userId={}, batchId={}", userId, batchId);
         
