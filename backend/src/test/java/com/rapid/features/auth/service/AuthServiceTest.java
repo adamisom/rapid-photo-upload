@@ -5,6 +5,7 @@ import com.rapid.features.auth.dto.AuthResponse;
 import com.rapid.features.auth.dto.LoginRequest;
 import com.rapid.features.auth.dto.RegisterRequest;
 import com.rapid.infrastructure.repository.UserRepository;
+import com.rapid.infrastructure.service.LimitsService;
 import com.rapid.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,9 @@ class AuthServiceTest {
     @Mock
     private JwtTokenProvider jwtTokenProvider;
 
+    @Mock
+    private LimitsService limitsService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -50,6 +54,7 @@ class AuthServiceTest {
     void testRegisterSuccessfully() {
         RegisterRequest request = new RegisterRequest("newuser@example.com", "password123");
         
+        doNothing().when(limitsService).checkUserLimit();
         when(userRepository.existsByEmail("newuser@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encoded-hash");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
@@ -67,6 +72,7 @@ class AuthServiceTest {
     void testRegisterThrowsExceptionOnDuplicateEmail() {
         RegisterRequest request = new RegisterRequest("existing@example.com", "password123");
         
+        doNothing().when(limitsService).checkUserLimit();
         when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
         assertThrows(RuntimeException.class, () -> authService.register(request));
@@ -77,6 +83,7 @@ class AuthServiceTest {
     void testRegisterUsesPasswordEncoder() {
         RegisterRequest request = new RegisterRequest("newuser@example.com", "password123");
         
+        doNothing().when(limitsService).checkUserLimit();
         when(userRepository.existsByEmail("newuser@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encoded-hash");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
