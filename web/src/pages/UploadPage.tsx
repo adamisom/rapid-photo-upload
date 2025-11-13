@@ -36,16 +36,6 @@ export default function UploadPage() {
     reset
   } = useUpload(20) || {};
 
-  // Debug logging for state changes
-  useEffect(() => {
-    debugLog('UploadPage state:', {
-      filesCount: files?.length || 0,
-      completedBatchesCount: completedBatches?.length || 0,
-      isUploading,
-      totalProgress,
-      hasError: !!error
-    });
-  }, [files?.length, completedBatches?.length, isUploading, totalProgress, error]);
 
   // Derive lastBatch and previousBatches from single array with defensive checks
   let lastBatch: UploadBatch | null = null;
