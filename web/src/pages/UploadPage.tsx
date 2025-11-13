@@ -6,21 +6,24 @@
  * Photo upload interface with drag-and-drop, file selection, and progress tracking
  */
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useUpload, type UploadBatch } from '../hooks/useUpload';
 import ProgressBar from '../components/ProgressBar';
-import { formatFileSize, formatTimeRemaining } from '../utils/formatters';
+import { formatFileSize, formatTimeRemaining, formatUploadTime } from '../utils/formatters';
+import { debugLog, debugError, debugWarn } from '../utils/debug';
 
 export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  
+  // Initialize hook (must be called unconditionally - React rules)
   const { 
-    files, 
-    completedBatches,
-    isUploading, 
-    totalProgress,
-    estimatedTimeRemaining,
-    error, 
+    files = [], 
+    completedBatches = [],
+    isUploading = false, 
+    totalProgress = 0,
+    estimatedTimeRemaining = null,
+    error = null, 
     addFiles, 
     removeFile,
     removeAll,
@@ -28,11 +31,31 @@ export default function UploadPage() {
     clearLastBatch, 
     clearPreviousBatches, 
     startUpload 
-  } = useUpload(20);
+  } = useUpload(20) || {};
 
-  // Derive lastBatch and previousBatches from single array
-  const lastBatch = completedBatches[0] || null;
-  const previousBatches = completedBatches.slice(1);
+  // Debug logging for state changes
+  useEffect(() => {
+    debugLog('UploadPage state:', {
+      filesCount: files?.length || 0,
+      completedBatchesCount: completedBatches?.length || 0,
+      isUploading,
+      totalProgress,
+      hasError: !!error
+    });
+  }, [files?.length, completedBatches?.length, isUploading, totalProgress, error]);
+
+  // Derive lastBatch and previousBatches from single array with defensive checks
+  let lastBatch: UploadBatch | null = null;
+  let previousBatches: UploadBatch[] = [];
+  
+  try {
+    if (completedBatches && Array.isArray(completedBatches) && completedBatches.length > 0) {
+      lastBatch = completedBatches[0] || null;
+      previousBatches = completedBatches.slice(1) || [];
+    }
+  } catch (err) {
+    debugError('Error deriving batches:', err, { completedBatches });
+  }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -51,54 +74,97 @@ export default function UploadPage() {
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (dropZoneRef.current) {
-      dropZoneRef.current.classList.remove('bg-blue-50', 'border-blue-300');
-    }
-    const allFiles = Array.from(e.dataTransfer.files);
-    const droppedFiles = allFiles.filter((file) =>
-      file.type.startsWith('image/')
-    );
-    
-    // Log if some files were filtered out
-    const nonImageCount = allFiles.length - droppedFiles.length;
-    if (nonImageCount > 0) {
-      console.warn(`Filtered out ${nonImageCount} non-image file(s) from drop`);
-    }
-    
-    // Log large batch drop
-    if (droppedFiles.length > 100) {
-      console.log(`Large batch dropped: ${droppedFiles.length} files`);
-    }
-    
-    if (droppedFiles.length > 0) {
-      addFiles(droppedFiles);
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+      if (dropZoneRef.current) {
+        dropZoneRef.current.classList.remove('bg-blue-50', 'border-blue-300');
+      }
+      
+      if (!e.dataTransfer?.files) {
+        debugWarn('Drop event has no files');
+        return;
+      }
+
+      const allFiles = Array.from(e.dataTransfer.files);
+      debugLog('Files dropped:', allFiles.length);
+      
+      const droppedFiles = allFiles.filter((file) => {
+        try {
+          return file?.type?.startsWith('image/');
+        } catch (err) {
+          debugError('Error checking file type:', err, { fileName: file?.name });
+          return false;
+        }
+      });
+      
+      // Log if some files were filtered out
+      const nonImageCount = allFiles.length - droppedFiles.length;
+      if (nonImageCount > 0) {
+        debugWarn(`Filtered out ${nonImageCount} non-image file(s) from drop`);
+      }
+      
+      // Log large batch drop
+      if (droppedFiles.length > 100) {
+        debugLog(`Large batch dropped: ${droppedFiles.length} files`);
+      }
+      
+      if (droppedFiles.length > 0) {
+        try {
+          addFiles(droppedFiles);
+        } catch (err) {
+          debugError('Error adding dropped files:', err);
+        }
+      }
+    } catch (err) {
+      debugError('Error in handleDrop:', err);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    try {
+      if (!e.target?.files) {
+        debugWarn('File select event has no files');
+        return;
+      }
+
       const selectedFiles = Array.from(e.target.files);
-      const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
+      debugLog('Files selected:', selectedFiles.length);
+      
+      const imageFiles = selectedFiles.filter((file) => {
+        try {
+          return file?.type?.startsWith('image/');
+        } catch (err) {
+          debugError('Error checking file type:', err, { fileName: file?.name });
+          return false;
+        }
+      });
       
       // Log if some files were filtered out (not images)
       const nonImageCount = selectedFiles.length - imageFiles.length;
       if (nonImageCount > 0) {
-        console.warn(`Filtered out ${nonImageCount} non-image file(s)`);
+        debugWarn(`Filtered out ${nonImageCount} non-image file(s)`);
       }
       
       // Log large batch selection
       if (imageFiles.length > 100) {
-        console.log(`Large batch selected: ${imageFiles.length} files`);
+        debugLog(`Large batch selected: ${imageFiles.length} files`);
       }
       
       if (imageFiles.length > 0) {
-        addFiles(imageFiles);
+        try {
+          addFiles(imageFiles);
+        } catch (err) {
+          debugError('Error adding selected files:', err);
+        }
       }
       
       // Reset input to allow selecting the same files again if needed
-      e.target.value = '';
+      if (e.target) {
+        e.target.value = '';
+      }
+    } catch (err) {
+      debugError('Error in handleFileSelect:', err);
     }
   };
 
@@ -106,46 +172,94 @@ export default function UploadPage() {
     fileInputRef.current?.click();
   };
 
-  // Helper to render a batch section
-  const renderBatchFiles = (batch: UploadBatch) => (
-    <div className="space-y-2">
-      {batch.files.map((file) => (
-        <div key={`${batch.id}-${file.id}`} className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-start space-x-3">
-            {/* Status Icon */}
-            <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-              {file.status === 'completed' && (
-                <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              )}
-              {file.status === 'failed' && (
-                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              )}
-            </div>
+  // Helper to render a batch section with error handling
+  const renderBatchFiles = (batch: UploadBatch) => {
+    try {
+      if (!batch) {
+        debugWarn('renderBatchFiles called with null/undefined batch');
+        return <div className="text-sm text-gray-500">No batch data available</div>;
+      }
 
-            {/* File Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <p className="font-medium text-gray-900 truncate text-sm">{file.file.name}</p>
-                <p className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                  file.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
-                  {file.status === 'completed' ? 'Done' : 'Failed'}
-                </p>
-              </div>
-              <p className="text-xs text-gray-500">{formatFileSize(file.file.size)}</p>
-              {file.error && (
-                <p className="text-xs text-red-600 mt-2">{file.error}</p>
-              )}
-            </div>
-          </div>
+      if (!batch.files || !Array.isArray(batch.files)) {
+        debugWarn('Batch has no files array:', { batchId: batch.id, batch });
+        return <div className="text-sm text-gray-500">No files in batch</div>;
+      }
+
+      if (batch.files.length === 0) {
+        return <div className="text-sm text-gray-500">Batch is empty</div>;
+      }
+
+      return (
+        <div className="space-y-2">
+          {batch.files.map((file, index) => {
+            try {
+              if (!file) {
+                debugWarn(`File at index ${index} is null/undefined`);
+                return null;
+              }
+
+              const fileKey = `${batch.id}-${file.id || index}`;
+              const fileName = file?.file?.name || 'Unknown file';
+              const fileSize = file?.file?.size || 0;
+              const fileStatus = file?.status || 'unknown';
+
+              return (
+                <div key={fileKey} className="bg-white rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-start space-x-3">
+                    {/* Status Icon */}
+                    <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      {fileStatus === 'completed' && (
+                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      {fileStatus === 'failed' && (
+                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* File Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-gray-900 truncate text-sm">{fileName}</p>
+                        <p className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                          fileStatus === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {fileStatus === 'completed' ? 'Done' : 'Failed'}
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {fileSize > 0 ? formatFileSize(fileSize) : 'Unknown size'}
+                      </p>
+                      {file.error && (
+                        <p className="text-xs text-red-600 mt-2">{file.error}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            } catch (err) {
+              debugError(`Error rendering file at index ${index}:`, err, { file, batchId: batch.id });
+              return (
+                <div key={`error-${index}`} className="bg-red-50 border border-red-200 p-2 rounded text-xs text-red-600">
+                  Error rendering file
+                </div>
+              );
+            }
+          })}
         </div>
-      ))}
-    </div>
-  );
+      );
+    } catch (err) {
+      debugError('Error in renderBatchFiles:', err, { batch });
+      return (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
+          Error rendering batch files
+        </div>
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -452,18 +566,26 @@ export default function UploadPage() {
         )}
 
         {/* Section 2: Last Batch */}
-        {lastBatch && (
+        {lastBatch && lastBatch.files && lastBatch.files.length > 0 && (
           <div className="mt-8 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Last Batch</h2>
                 <p className="text-xs text-gray-500 mt-1">
-                  {lastBatch.files.length} file{lastBatch.files.length !== 1 ? 's' : ''} • 
-                  {' '}{lastBatch.files.filter((f) => f.status === 'completed').length} completed, 
-                  {' '}{lastBatch.files.filter((f) => f.status === 'failed').length} failed
-                  {lastBatch.totalUploadTimeSeconds !== undefined && (
-                    <> • Uploaded in {lastBatch.totalUploadTimeSeconds.toFixed(2)}s</>
-                  )}
+                  {(() => {
+                    try {
+                      const fileCount = lastBatch?.files?.length || 0;
+                      const completedCount = lastBatch?.files?.filter((f) => f?.status === 'completed').length || 0;
+                      const failedCount = lastBatch?.files?.filter((f) => f?.status === 'failed').length || 0;
+                      const timeStr = lastBatch?.totalUploadTimeSeconds !== undefined 
+                        ? ` • Uploaded in ${formatUploadTime(lastBatch.totalUploadTimeSeconds)}`
+                        : '';
+                      return `${fileCount} file${fileCount !== 1 ? 's' : ''} • ${completedCount} completed, ${failedCount} failed${timeStr}`;
+                    } catch (err) {
+                      debugError('Error rendering last batch info:', err);
+                      return 'Error loading batch info';
+                    }
+                  })()}
                 </p>
               </div>
               <button
@@ -503,19 +625,36 @@ export default function UploadPage() {
               </button>
             </div>
             <div className="max-h-96 overflow-y-auto pr-2 space-y-6">
-              {previousBatches.map((batch, index) => (
-                <div key={batch.id} className="border-l-4 border-gray-300 pl-4">
-                  <p className="text-sm font-medium text-gray-700 mb-3">
-                    Batch {previousBatches.length - index} • 
-                    {' '}{batch.files.filter((f) => f.status === 'completed').length} completed, 
-                    {' '}{batch.files.filter((f) => f.status === 'failed').length} failed
-                    {batch.totalUploadTimeSeconds !== undefined && (
-                      <> • {batch.totalUploadTimeSeconds.toFixed(2)}s</>
-                    )}
-                  </p>
-                  {renderBatchFiles(batch)}
-                </div>
-              ))}
+              {previousBatches.map((batch, index) => {
+                try {
+                  if (!batch || !batch.id) {
+                    debugWarn(`Invalid batch at index ${index}:`, batch);
+                    return null;
+                  }
+
+                  const completedCount = batch?.files?.filter((f) => f?.status === 'completed').length || 0;
+                  const failedCount = batch?.files?.filter((f) => f?.status === 'failed').length || 0;
+                  const timeStr = batch?.totalUploadTimeSeconds !== undefined 
+                    ? ` • ${formatUploadTime(batch.totalUploadTimeSeconds)}`
+                    : '';
+
+                  return (
+                    <div key={batch.id} className="border-l-4 border-gray-300 pl-4">
+                      <p className="text-sm font-medium text-gray-700 mb-3">
+                        Batch {previousBatches.length - index} • {completedCount} completed, {failedCount} failed{timeStr}
+                      </p>
+                      {renderBatchFiles(batch)}
+                    </div>
+                  );
+                } catch (err) {
+                  debugError(`Error rendering previous batch at index ${index}:`, err, { batch });
+                  return (
+                    <div key={`error-${index}`} className="border-l-4 border-red-300 pl-4 bg-red-50 p-2 rounded">
+                      <p className="text-sm text-red-600">Error rendering batch</p>
+                    </div>
+                  );
+                }
+              })}
             </div>
           </div>
         )}
