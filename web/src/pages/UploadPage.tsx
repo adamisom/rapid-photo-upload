@@ -455,41 +455,43 @@ export default function UploadPage() {
                       </svg>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <p className={`font-bold text-lg ${
-                      files.every((f) => f.status === 'completed')
-                        ? 'text-green-900'
-                        : files.filter((f) => f.status === 'completed').length === 0
-                          ? 'text-red-900'
-                          : 'text-yellow-900'
-                    }`}>
-                      {files.every((f) => f.status === 'completed')
-                        ? 'All files uploaded successfully!'
-                        : files.filter((f) => f.status === 'completed').length === 0
-                          ? 'Upload failed'
-                          : 'Upload completed with errors'}
-                    </p>
-                    <p className={`text-sm mt-1 ${
-                      files.every((f) => f.status === 'completed')
-                        ? 'text-green-700'
-                        : files.filter((f) => f.status === 'completed').length === 0
-                          ? 'text-red-700'
-                          : 'text-yellow-700'
-                    }`}>
-                      {files.filter((f) => f.status === 'completed').length} succeeded
-                      {files.filter((f) => f.status === 'failed').length > 0 && 
-                        `, ${files.filter((f) => f.status === 'failed').length} failed`}
-                    </p>
+                  <div className="flex-1 flex items-start justify-between">
+                    <div>
+                      <p className={`font-bold text-lg ${
+                        files.every((f) => f.status === 'completed')
+                          ? 'text-green-900'
+                          : files.filter((f) => f.status === 'completed').length === 0
+                            ? 'text-red-900'
+                            : 'text-yellow-900'
+                      }`}>
+                        {files.every((f) => f.status === 'completed')
+                          ? 'All files uploaded successfully!'
+                          : files.filter((f) => f.status === 'completed').length === 0
+                            ? 'Upload failed'
+                            : 'Upload completed with errors'}
+                      </p>
+                      <p className={`text-sm mt-1 ${
+                        files.every((f) => f.status === 'completed')
+                          ? 'text-green-700'
+                          : files.filter((f) => f.status === 'completed').length === 0
+                            ? 'text-red-700'
+                            : 'text-yellow-700'
+                      }`}>
+                        {files.filter((f) => f.status === 'completed').length} succeeded
+                        {files.filter((f) => f.status === 'failed').length > 0 && 
+                          `, ${files.filter((f) => f.status === 'failed').length} failed`}
+                      </p>
+                      {files.filter((f) => f.status === 'failed').length === 1 && (
+                        <p className="text-xs text-gray-600 mt-2">Click Retry on the failed file to try again</p>
+                      )}
+                    </div>
                     {files.filter((f) => f.status === 'failed').length >= 2 && (
                       <button
                         onClick={retryAllFailed}
-                        className="mt-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+                        className="ml-4 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm flex-shrink-0"
                       >
-                        Retry All Failed ({files.filter((f) => f.status === 'failed').length})
+                        Retry All Failed
                       </button>
-                    )}
-                    {files.filter((f) => f.status === 'failed').length === 1 && (
-                      <p className="text-xs text-gray-600 mt-2">Click Retry on the failed file to try again</p>
                     )}
                   </div>
                 </div>
