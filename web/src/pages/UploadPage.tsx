@@ -6,7 +6,7 @@
  * Photo upload interface with drag-and-drop, file selection, and progress tracking
  */
 
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { useUpload, type UploadBatch } from '../hooks/useUpload';
 import ProgressBar from '../components/ProgressBar';
 import { formatFileSize, formatTimeRemaining, formatUploadTime } from '../utils/formatters';
