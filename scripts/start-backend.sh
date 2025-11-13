@@ -70,4 +70,14 @@ fi
 # Start backend
 echo -e "${GREEN}✅ All prerequisites met, starting backend...${NC}"
 cd "$(dirname "$0")/../backend"
+
+# Ensure database environment variables are set (use defaults if not set)
+export PGHOST="${PGHOST:-localhost}"
+export PGPORT="${PGPORT:-5432}"
+export PGDATABASE="${PGDATABASE:-rapidphoto_dev}"
+export PGUSER="${PGUSER:-postgres}"
+export PGPASSWORD="${PGPASSWORD:-postgres}"
+
+echo -e "${GREEN}   Database config: ${PGHOST}:${PGPORT}/${PGDATABASE}${NC}"
+
 ./mvnw spring-boot:run
