@@ -129,7 +129,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
   // Initialize state from localStorage if available
   const [uploadState, setUploadState] = useState<UploadState>(() => {
     const stored = loadStateFromStorage();
-    if (stored) {
+    if (stored && stored.activeFiles) {
       // Restore state - note: File objects can't be restored, so we create placeholder File objects
       // These won't be usable for re-upload, but we can show their status
       const activeFiles: UploadFile[] = stored.activeFiles.map(sf => {
@@ -148,7 +148,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
         };
       });
       
-      const completedBatches: UploadBatch[] = stored.completedBatches.map(b => ({
+      const completedBatches: UploadBatch[] = (stored.completedBatches || []).map(b => ({
         id: b.id,
         files: b.files.map(sf => {
           const blob = new Blob([], { type: sf.fileType });
