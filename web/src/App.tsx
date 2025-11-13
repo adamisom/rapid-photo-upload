@@ -55,8 +55,16 @@ const AppRoutes = () => {
       <Header />
       <Routes>
         {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={
+              <ErrorBoundary>
+                <LoginPage />
+              </ErrorBoundary>
+            } />
+            <Route path="/register" element={
+              <ErrorBoundary>
+                <RegisterPage />
+              </ErrorBoundary>
+            } />
 
             {/* Protected Routes */}
             <Route
