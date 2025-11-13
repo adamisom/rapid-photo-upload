@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
-import { useFocusEffect } from '@react-navigation/native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -9,17 +9,10 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
-
-  useFocusEffect(
-    React.useCallback(() => {
-      // Clear form on focus
-      return () => {
-        setError(null);
-      };
-    }, [])
-  );
+  const router = useRouter();
 
   const handleLogin = async () => {
+    // Clear any previous error
     setError(null);
 
     if (!email.trim()) {
@@ -33,15 +26,14 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    try {
-      await login(email, password);
-      // Navigation happens automatically in router
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Login failed';
-      setError(message);
-      console.error('Login error:', err);
-    } finally {
-      setLoading(false);
+    
+    const result = await login(email, password);
+    setLoading(false);
+    
+    if (result.success) {
+      // Navigation happens automatically in router on success
+    } else {
+      setError(result.error || 'Login failed');
     }
   };
 
@@ -51,7 +43,11 @@ export default function LoginScreen() {
         <Text style={styles.title}>RapidPhotoUpload</Text>
         <Text style={styles.subtitle}>Login</Text>
 
-        {error && <Text style={styles.error}>{error}</Text>}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.error}>{error}</Text>
+          </View>
+        )}
 
         <TextInput
           style={styles.input}
@@ -86,7 +82,9 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
-        <Text style={styles.link}>Don&apos;t have an account? Register</Text>
+        <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+          <Text style={styles.link}>Don&apos;t have an account? Register</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -140,9 +138,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  errorContainer: {
+    backgroundColor: '#fee',
+    borderWidth: 1,
+    borderColor: '#fcc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    marginTop: 10,
+  },
   error: {
     color: '#cc0000',
-    marginBottom: 15,
     fontSize: 14,
     textAlign: 'center',
   },

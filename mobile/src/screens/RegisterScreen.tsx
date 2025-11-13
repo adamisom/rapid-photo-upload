@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 
 export default function RegisterScreen() {
@@ -9,8 +10,10 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { register } = useAuth();
+  const router = useRouter();
 
   const handleRegister = async () => {
+    // Clear any previous error
     setError(null);
 
     if (!email.trim()) {
@@ -39,15 +42,14 @@ export default function RegisterScreen() {
     }
 
     setLoading(true);
-    try {
-      await register(email, password);
-      // Navigation happens automatically in router
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Registration failed';
-      setError(message);
-      console.error('Register error:', err);
-    } finally {
-      setLoading(false);
+    const result = await register(email, password);
+    setLoading(false);
+    
+    if (result.success) {
+      // Navigation happens automatically in router on success
+    } else {
+      // Set error message directly - no throwing means no remount!
+      setError(result.error || 'Registration failed');
     }
   };
 
@@ -57,7 +59,11 @@ export default function RegisterScreen() {
         <Text style={styles.title}>RapidPhotoUpload</Text>
         <Text style={styles.subtitle}>Create Account</Text>
 
-        {error && <Text style={styles.error}>{error}</Text>}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.error}>{error}</Text>
+          </View>
+        )}
 
         <TextInput
           style={styles.input}
@@ -94,6 +100,7 @@ export default function RegisterScreen() {
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleRegister}
           disabled={loading}
+          activeOpacity={0.7}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -102,7 +109,9 @@ export default function RegisterScreen() {
           )}
         </TouchableOpacity>
 
-        <Text style={styles.link}>Already have an account? Login</Text>
+        <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+          <Text style={styles.link}>Already have an account? Login</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -156,9 +165,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  errorContainer: {
+    backgroundColor: '#fee',
+    borderWidth: 1,
+    borderColor: '#fcc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    marginTop: 10,
+  },
   error: {
     color: '#cc0000',
-    marginBottom: 15,
     fontSize: 14,
     textAlign: 'center',
   },

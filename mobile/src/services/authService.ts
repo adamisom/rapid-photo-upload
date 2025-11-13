@@ -4,32 +4,37 @@ import type { LoginRequest, RegisterRequest, AuthResponse } from '../types';
 
 export const authService = {
   register: async (email: string, password: string): Promise<AuthResponse> => {
-    const request: RegisterRequest = { email, password };
-    const response = await apiClient.post<AuthResponse>('/api/auth/register', request);
-    const { token } = response.data;
-    await SecureStore.setItemAsync('authToken', token);
-    return response.data;
-  },
-
-  login: async (email: string, password: string): Promise<AuthResponse> => {
     try {
-      console.log('📡 Sending login request to:', apiClient.defaults.baseURL);
-      const request: LoginRequest = { email, password };
-      const response = await apiClient.post<AuthResponse>('/api/auth/login', request);
-      console.log('✅ Login response received');
+      const request: RegisterRequest = { email, password };
+      const response = await apiClient.post<AuthResponse>('/api/auth/register', request);
       const { token } = response.data;
       await SecureStore.setItemAsync('authToken', token);
       return response.data;
     } catch (error: any) {
-      console.error('❌ Login failed:', {
-        message: error.message,
-        code: error.code,
-        response: error.response?.data,
-        status: error.response?.status,
-        baseURL: apiClient.defaults.baseURL,
-        url: error.config?.url,
-      });
-      throw error;
+      // Extract backend error message if available
+      const backendMessage = error.response?.data?.message || error.message || 'Registration failed';
+      // Create a simple error object that won't trigger React Native error overlay
+      const registerError: any = new Error(backendMessage);
+      registerError.isHandled = true; // Mark as handled to prevent error overlay
+      throw registerError;
+    }
+  },
+
+  login: async (email: string, password: string): Promise<AuthResponse> => {
+    try {
+      const request: LoginRequest = { email, password };
+      const response = await apiClient.post<AuthResponse>('/api/auth/login', request);
+      const { token } = response.data;
+      await SecureStore.setItemAsync('authToken', token);
+      return response.data;
+    } catch (error: any) {
+      // Extract backend error message if available
+      const backendMessage = error.response?.data?.message || error.message || 'Login failed';
+      // Create a simple error object that won't trigger React Native error overlay
+      const loginError: any = new Error(backendMessage);
+      loginError.isHandled = true; // Mark as handled to prevent error overlay
+      loginError.response = error.response; // Preserve response for error extraction
+      throw loginError;
     }
   },
 

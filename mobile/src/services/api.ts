@@ -39,9 +39,14 @@ apiClient.interceptors.response.use(
       try {
         await SecureStore.deleteItemAsync('authToken');
       } catch (err) {
-        console.error('Failed to clear auth token:', err);
+        // Silently fail - don't log errors that might trigger notification
+        console.log('Failed to clear auth token');
       }
       // Navigation to login will be handled by auth context
+    }
+    // Mark error as handled to prevent Expo error overlay for expected errors
+    if (error.response?.status === 400 || error.response?.status === 401) {
+      error.isHandled = true;
     }
     return Promise.reject(error);
   }
