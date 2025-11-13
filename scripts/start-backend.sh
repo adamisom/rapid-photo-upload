@@ -80,6 +80,10 @@ export PGPASSWORD="${PGPASSWORD:-postgres}"
 
 echo -e "${GREEN}   Database config: ${PGHOST}:${PGPORT}/${PGDATABASE}${NC}"
 echo -e "${GREEN}   JWT_SECRET: ${JWT_SECRET:+SET (${#JWT_SECRET} chars)}${NC}"
+echo -e "${GREEN}   Logs: logs/rapidphoto-api.log (verbose)${NC}"
+
+# Create logs directory if it doesn't exist
+mkdir -p logs
 
 # Pass database config as system properties to ensure Spring Boot reads them
 ./mvnw spring-boot:run \
