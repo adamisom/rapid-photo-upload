@@ -29,6 +29,7 @@ export default function UploadPage() {
     removeFile,
     removeAll,
     retryFile,
+    retryAllFailed,
     clearLastBatch, 
     clearPreviousBatches, 
     startUpload,
@@ -478,9 +479,18 @@ export default function UploadPage() {
                       {files.filter((f) => f.status === 'completed').length} succeeded
                       {files.filter((f) => f.status === 'failed').length > 0 && 
                         `, ${files.filter((f) => f.status === 'failed').length} failed`}
-                      {files.filter((f) => f.status === 'failed').length > 0 && 
-                        ' - Click Retry to try again'}
                     </p>
+                    {files.filter((f) => f.status === 'failed').length >= 2 && (
+                      <button
+                        onClick={retryAllFailed}
+                        className="mt-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+                      >
+                        Retry All Failed ({files.filter((f) => f.status === 'failed').length})
+                      </button>
+                    )}
+                    {files.filter((f) => f.status === 'failed').length === 1 && (
+                      <p className="text-xs text-gray-600 mt-2">Click Retry on the failed file to try again</p>
+                    )}
                   </div>
                 </div>
               </div>

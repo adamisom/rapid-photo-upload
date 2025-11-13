@@ -275,6 +275,17 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
     }));
   }, []);
 
+  const retryAllFailed = useCallback(() => {
+    setUploadState((prev) => ({
+      ...prev,
+      activeFiles: prev.activeFiles.map((f) =>
+        f.status === 'failed'
+          ? { ...f, status: 'pending', progress: 0, error: undefined }
+          : f
+      )
+    }));
+  }, []);
+
   const clearLastBatch = useCallback(() => {
     setUploadState((prev) => ({
       ...prev,
@@ -657,6 +668,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
     removeFile,
     removeAll,
     retryFile,
+    retryAllFailed,
     clearLastBatch,
     clearPreviousBatches,
     startUpload,
