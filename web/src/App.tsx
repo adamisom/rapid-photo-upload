@@ -22,6 +22,7 @@ import { AuthProvider } from './context/AuthContextProvider';
 import { useAuth } from './hooks/useAuth';
 import Header from './components/Header';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -62,7 +63,9 @@ const AppRoutes = () => {
               path="/upload"
               element={
                 <ProtectedRoute>
-                  <UploadPage />
+                  <ErrorBoundary>
+                    <UploadPage />
+                  </ErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -70,7 +73,9 @@ const AppRoutes = () => {
               path="/gallery"
               element={
                 <ProtectedRoute>
-                  <GalleryPage />
+                  <ErrorBoundary>
+                    <GalleryPage />
+                  </ErrorBoundary>
                 </ProtectedRoute>
               }
             />
