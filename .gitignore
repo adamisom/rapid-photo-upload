@@ -24,6 +24,12 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.bak
+*.env.bak
+
+# Environment files in web/ and mobile/
+web/.env*
+mobile/.env*
 
 # Maven
 .mvn/wrapper/
