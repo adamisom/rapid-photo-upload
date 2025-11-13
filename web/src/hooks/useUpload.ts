@@ -45,6 +45,7 @@ interface UploadManager {
   removeFile: (fileId: string) => void;
   removeAll: () => void;
   retryFile: (fileId: string) => void;
+  retryAllFailed: () => void;
   clearLastBatch: () => void;
   clearPreviousBatches: () => void;
   startUpload: () => Promise<void>;
@@ -349,7 +350,15 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
       }
       
       // Request URLs in batches (parallel within batch, sequential between batches)
-      for (const batch of urlBatches) {
+      // Add small delay between batches to avoid overwhelming backend/rate limits
+      for (let i = 0; i < urlBatches.length; i++) {
+        const batch = urlBatches[i];
+        
+        // Add delay between batches (except first one)
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay between batches
+        }
+        
         try {
           const urlResponses = await Promise.all(
             batch.map(file =>
