@@ -3,20 +3,22 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, 
 import * as ImagePicker from 'expo-image-picker';
 import { useUpload } from '../hooks/useUpload';
 import ProgressBar from '../components/ProgressBar';
-import { formatFileSize, formatTimeRemaining } from '../utils/formatters';
+import { formatFileSize, formatTimeRemaining, formatUploadTime } from '../utils/formatters';
 
 export default function UploadScreen() {
   const [loading, setLoading] = useState(false);
   const { 
     files, 
     completedBatches,
-    isUploading, 
+    isUploading,
+    isPreparing,
     totalProgress,
     estimatedTimeRemaining,
     addFile, 
     removeFile,
     removeAll,
     retryFile,
+    retryAllFailed,
     clearLastBatch,
     clearPreviousBatches,
     startUpload
@@ -150,22 +152,28 @@ export default function UploadScreen() {
       )}
 
       {/* Overall Progress */}
-      {isUploading && (
+      {(isUploading || isPreparing) && (
         <View style={styles.progressSection}>
           <Text style={styles.progressText}>
-            {files.filter(f => f.status === 'completed').length} of {files.length} files uploaded
+            {isPreparing 
+              ? `Preparing upload for ${files.length} file${files.length !== 1 ? 's' : ''}...`
+              : `${files.filter(f => f.status === 'completed').length} of ${files.length} files uploaded`}
           </Text>
-          <Text style={styles.progressPercent}>{Math.round(totalProgress)}%</Text>
-          {files.length >= 50 && (
-            <Text style={styles.etaText}>
-              uploading in batches of 20
-            </Text>
-          )}
-          <ProgressBar progress={totalProgress} />
-          {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && (
-            <Text style={styles.etaText}>
-              ~{formatTimeRemaining(estimatedTimeRemaining)} remaining
-            </Text>
+          {!isPreparing && (
+            <>
+              <Text style={styles.progressPercent}>{Math.round(totalProgress)}%</Text>
+              {files.length >= 50 && (
+                <Text style={styles.etaText}>
+                  uploading in batches of 20
+                </Text>
+              )}
+              <ProgressBar progress={totalProgress} />
+              {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && (
+                <Text style={styles.etaText}>
+                  ~{formatTimeRemaining(estimatedTimeRemaining)} remaining
+                </Text>
+              )}
+            </>
           )}
         </View>
       )}
@@ -239,14 +247,31 @@ export default function UploadScreen() {
               <Text style={styles.buttonText}>Start Upload</Text>
             </TouchableOpacity>
           )}
+          
+          {/* Retry All Failed Button */}
+          {!isUploading && files.filter(f => f.status === 'failed').length >= 2 && (
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: '#6B7280', marginTop: 8 }]}
+              onPress={retryAllFailed}
+            >
+              <Text style={styles.buttonText}>Retry All Failed</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
       {/* Last Batch */}
-      {lastBatch && (
+      {lastBatch && lastBatch.files && lastBatch.files.length > 0 && (
         <View style={styles.batchSection}>
           <View style={styles.batchHeader}>
-            <Text style={styles.sectionTitle}>Last Batch</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionTitle}>Last Batch</Text>
+              {lastBatch.totalUploadTimeSeconds !== undefined && (
+                <Text style={styles.batchSubtext}>
+                  Uploaded in {formatUploadTime(lastBatch.totalUploadTimeSeconds)}
+                </Text>
+              )}
+            </View>
             <TouchableOpacity onPress={clearLastBatch}>
               <Text style={styles.clearBatchText}>Clear</Text>
             </TouchableOpacity>
@@ -281,6 +306,7 @@ export default function UploadScreen() {
             <View key={batch.id} style={styles.batchSection}>
               <Text style={styles.batchSubtext}>
                 Batch {previousBatches.length - index} • {batch.files.length} file{batch.files.length !== 1 ? 's' : ''}
+                {batch.totalUploadTimeSeconds !== undefined && ` • ${formatUploadTime(batch.totalUploadTimeSeconds)}`}
               </Text>
               <FlatList
                 data={batch.files}

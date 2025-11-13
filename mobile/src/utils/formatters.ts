@@ -30,3 +30,16 @@ export function formatTimeRemaining(seconds: number): string {
   return `${hours}h ${remainingMinutes}m`;
 }
 
+/**
+ * Format seconds into upload time display (e.g., "45s" or "9m 12s")
+ * @param seconds - Duration in seconds
+ * @returns Formatted string (e.g., "45s", "9m 12s")
+ */
+export function formatUploadTime(seconds: number | undefined | null): string {
+  if (seconds == null || isNaN(seconds) || seconds < 0) return '0s';
+  if (seconds < 60) return `${seconds.toFixed(2)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${minutes}m ${remainingSeconds}s`;
+}
+
