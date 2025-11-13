@@ -7,6 +7,10 @@ import { formatFileSize, formatTimeRemaining, formatUploadTime } from '../utils/
 
 export default function UploadScreen() {
   const [loading, setLoading] = useState(false);
+  const [batchPage, setBatchPage] = useState(0);
+  const batchesPerPage = 5;
+  const [batchFilePages, setBatchFilePages] = useState<{ [key: string]: number }>({});
+  const filesPerPage = 50;
   const { 
     files, 
     completedBatches,
@@ -38,7 +42,7 @@ export default function UploadScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images',
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.8,
       });
@@ -46,7 +50,7 @@ export default function UploadScreen() {
       if (!result.canceled) {
         result.assets.forEach((asset) => {
           // Extract filename from URI if not provided
-          let filename = asset.filename;
+          let filename = asset.fileName;
           if (!filename && asset.uri) {
             // Extract from URI: "file://.../ImagePicker/216B46A8.png" -> "216B46A8.png"
             const uriParts = asset.uri.split('/');
@@ -70,7 +74,7 @@ export default function UploadScreen() {
           
           console.log('📸 Selected photo:', {
             uri: asset.uri,
-            originalFilename: asset.filename,
+            originalFilename: asset.fileName,
             extractedFilename: filename,
             type: asset.type,
             fileSize: asset.fileSize,
@@ -195,7 +199,11 @@ export default function UploadScreen() {
           </Text>
 
           <FlatList
-            data={files}
+            data={[...files].sort((a, b) => {
+              // Sort: uploading first, then pending, then completed, then failed
+              const statusOrder = { uploading: 0, pending: 1, completed: 2, failed: 3 };
+              return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+            })}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.fileItem}>
@@ -261,55 +269,117 @@ export default function UploadScreen() {
       )}
 
       {/* Last Batch */}
-      {lastBatch && lastBatch.files && lastBatch.files.length > 0 && (
-        <View style={styles.batchSection}>
-          <View style={styles.batchHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.sectionTitle}>Last Batch</Text>
-              {lastBatch.totalUploadTimeSeconds !== undefined && (
-                <Text style={styles.batchSubtext}>
-                  Uploaded in {formatUploadTime(lastBatch.totalUploadTimeSeconds)}
-                </Text>
-              )}
+      {lastBatch && lastBatch.files && lastBatch.files.length > 0 && (() => {
+        const batchId = lastBatch.id;
+        const currentPage = batchFilePages[batchId] || 0;
+        const totalFilePages = Math.ceil(lastBatch.files.length / filesPerPage);
+        const startIndex = currentPage * filesPerPage;
+        const endIndex = startIndex + filesPerPage;
+        const paginatedFiles = lastBatch.files.slice(startIndex, endIndex);
+        
+        return (
+          <View style={styles.batchSection}>
+            <View style={styles.batchHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Last Batch</Text>
+                {lastBatch.totalUploadTimeSeconds !== undefined && (
+                  <Text style={styles.batchSubtext}>
+                    Uploaded in {formatUploadTime(lastBatch.totalUploadTimeSeconds)}
+                  </Text>
+                )}
+                {totalFilePages > 1 && (
+                  <Text style={styles.batchSubtext}>
+                    Files: Page {currentPage + 1} of {totalFilePages} • {lastBatch.files.length} total
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={clearLastBatch}>
+                <Text style={styles.clearBatchText}>Clear</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={clearLastBatch}>
-              <Text style={styles.clearBatchText}>Clear</Text>
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={lastBatch.files}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.batchFileItem}>
-                <Text style={styles.fileName} numberOfLines={1}>
-                  {item.file.name}
+            <FlatList
+              data={paginatedFiles}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.batchFileItem}>
+                  <Text style={styles.fileName} numberOfLines={1}>
+                    {item.file.name}
+                  </Text>
+                  <Text style={styles.statusCompleted}>✓</Text>
+                </View>
+              )}
+              scrollEnabled={false}
+            />
+            
+            {/* File Pagination within Last Batch */}
+            {totalFilePages > 1 && (
+              <View style={styles.pagination}>
+                <TouchableOpacity
+                  style={[styles.paginationButton, currentPage === 0 && styles.paginationButtonDisabled]}
+                  onPress={() => setBatchFilePages(prev => ({ ...prev, [batchId]: Math.max(0, currentPage - 1) }))}
+                  disabled={currentPage === 0}
+                >
+                  <Text style={styles.paginationText}>Previous</Text>
+                </TouchableOpacity>
+                <Text style={styles.paginationInfo}>
+                  Page {currentPage + 1} of {totalFilePages}
                 </Text>
-                <Text style={styles.statusCompleted}>✓</Text>
+                <TouchableOpacity
+                  style={[styles.paginationButton, currentPage >= totalFilePages - 1 && styles.paginationButtonDisabled]}
+                  onPress={() => setBatchFilePages(prev => ({ ...prev, [batchId]: Math.min(totalFilePages - 1, currentPage + 1) }))}
+                  disabled={currentPage >= totalFilePages - 1}
+                >
+                  <Text style={styles.paginationText}>Next</Text>
+                </TouchableOpacity>
               </View>
             )}
-            scrollEnabled={false}
-          />
-        </View>
-      )}
+          </View>
+        );
+      })()}
 
       {/* Previous Batches */}
-      {previousBatches.length > 0 && (
-        <View style={styles.previousBatchesContainer}>
-          <View style={styles.batchHeader}>
-            <Text style={styles.sectionTitle}>Previous Batches ({previousBatches.length})</Text>
-            <TouchableOpacity onPress={clearPreviousBatches}>
-              <Text style={styles.clearBatchText}>Clear All</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {previousBatches.map((batch, index) => (
+      {previousBatches.length > 0 && (() => {
+        const totalBatchPages = Math.ceil(previousBatches.length / batchesPerPage);
+        const startIndex = batchPage * batchesPerPage;
+        const endIndex = startIndex + batchesPerPage;
+        const paginatedBatches = previousBatches.slice(startIndex, endIndex);
+        
+        return (
+          <View style={styles.previousBatchesContainer}>
+            <View style={styles.batchHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>
+                  Previous Batches ({previousBatches.length})
+                </Text>
+                {totalBatchPages > 1 && (
+                  <Text style={styles.batchSubtext}>
+                    Page {batchPage + 1} of {totalBatchPages}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={clearPreviousBatches}>
+                <Text style={styles.clearBatchText}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {paginatedBatches.map((batch, paginatedIndex) => {
+              const originalIndex = startIndex + paginatedIndex;
+              const batchId = batch.id;
+              const currentFilePage = batchFilePages[batchId] || 0;
+              const totalFilePages = Math.ceil(batch.files.length / filesPerPage);
+              const fileStartIndex = currentFilePage * filesPerPage;
+              const fileEndIndex = fileStartIndex + filesPerPage;
+              const paginatedFiles = batch.files.slice(fileStartIndex, fileEndIndex);
+              
+              return (
             <View key={batch.id} style={styles.batchSection}>
               <Text style={styles.batchSubtext}>
-                Batch {previousBatches.length - index} • {batch.files.length} file{batch.files.length !== 1 ? 's' : ''}
+                Batch {previousBatches.length - originalIndex} • {batch.files.length} file{batch.files.length !== 1 ? 's' : ''}
                 {batch.totalUploadTimeSeconds !== undefined && ` • ${formatUploadTime(batch.totalUploadTimeSeconds)}`}
+                {totalFilePages > 1 && ` • Files: Page ${currentFilePage + 1}/${totalFilePages}`}
               </Text>
               <FlatList
-                data={batch.files}
+                data={paginatedFiles}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <View style={styles.batchFileItem}>
@@ -321,10 +391,61 @@ export default function UploadScreen() {
                 )}
                 scrollEnabled={false}
               />
+              
+              {/* File Pagination within Batch */}
+              {totalFilePages > 1 && (
+                <View style={styles.pagination}>
+                  <TouchableOpacity
+                    style={[styles.paginationButton, currentFilePage === 0 && styles.paginationButtonDisabled]}
+                    onPress={() => setBatchFilePages(prev => ({ ...prev, [batchId]: Math.max(0, currentFilePage - 1) }))}
+                    disabled={currentFilePage === 0}
+                  >
+                    <Text style={styles.paginationText}>Previous</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.paginationInfo}>
+                    Page {currentFilePage + 1} of {totalFilePages}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.paginationButton, currentFilePage >= totalFilePages - 1 && styles.paginationButtonDisabled]}
+                    onPress={() => setBatchFilePages(prev => ({ ...prev, [batchId]: Math.min(totalFilePages - 1, currentFilePage + 1) }))}
+                    disabled={currentFilePage >= totalFilePages - 1}
+                  >
+                    <Text style={styles.paginationText}>Next</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
-          ))}
-        </View>
-      )}
+            );
+            })}
+            
+            {/* Batch Pagination */}
+            {totalBatchPages > 1 && (
+              <View style={styles.pagination}>
+                <TouchableOpacity
+                  style={[styles.paginationButton, batchPage === 0 && styles.paginationButtonDisabled]}
+                  onPress={() => setBatchPage(Math.max(0, batchPage - 1))}
+                  disabled={batchPage === 0}
+                >
+                  <Text style={styles.paginationText}>Previous</Text>
+                </TouchableOpacity>
+                <Text style={styles.paginationInfo}>
+                  Page {batchPage + 1} of {totalBatchPages}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.paginationButton,
+                    batchPage >= totalBatchPages - 1 && styles.paginationButtonDisabled
+                  ]}
+                  onPress={() => setBatchPage(Math.min(totalBatchPages - 1, batchPage + 1))}
+                  disabled={batchPage >= totalBatchPages - 1}
+                >
+                  <Text style={styles.paginationText}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        );
+      })()}
 
       {/* Empty State */}
       {files.length === 0 && !lastBatch && !isUploading && (
@@ -541,6 +662,35 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: '#999',
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  paginationButton: {
+    backgroundColor: '#0066cc',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  paginationButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+  },
+  paginationText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  paginationInfo: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
   },
 });
 

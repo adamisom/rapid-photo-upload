@@ -6,7 +6,7 @@
  * Photo upload interface with drag-and-drop, file selection, and progress tracking
  */
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useUpload, type UploadBatch } from '../hooks/useUpload';
 import ProgressBar from '../components/ProgressBar';
 import { formatFileSize, formatTimeRemaining, formatUploadTime } from '../utils/formatters';
@@ -15,6 +15,10 @@ import { debugLog, debugError, debugWarn } from '../utils/debug';
 export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const [batchPage, setBatchPage] = useState(0);
+  const batchesPerPage = 5;
+  const [batchFilePages, setBatchFilePages] = useState<Record<string, number>>({});
+  const filesPerPage = 50;
   
   // Initialize hook (must be called unconditionally - React rules)
   const { 
@@ -165,7 +169,7 @@ export default function UploadPage() {
     fileInputRef.current?.click();
   };
 
-  // Helper to render a batch section with error handling
+  // Helper to render a batch section with error handling and pagination
   const renderBatchFiles = (batch: UploadBatch) => {
     try {
       if (!batch) {
@@ -182,9 +186,17 @@ export default function UploadPage() {
         return <div className="text-sm text-gray-500">Batch is empty</div>;
       }
 
+      const batchId = batch.id;
+      const currentPage = batchFilePages[batchId] || 0;
+      const totalFilePages = Math.ceil(batch.files.length / filesPerPage);
+      const startIndex = currentPage * filesPerPage;
+      const endIndex = startIndex + filesPerPage;
+      const paginatedFiles = batch.files.slice(startIndex, endIndex);
+
       return (
-        <div className="space-y-2">
-          {batch.files.map((file, index) => {
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {paginatedFiles.map((file, index) => {
             try {
               if (!file) {
                 debugWarn(`File at index ${index} is null/undefined`);
@@ -242,6 +254,40 @@ export default function UploadPage() {
               );
             }
           })}
+          </div>
+          
+          {/* File Pagination within Batch */}
+          {totalFilePages > 1 && (
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3 border-t border-gray-200">
+              <button
+                onClick={() => setBatchFilePages(prev => ({ ...prev, [batchId]: Math.max(0, currentPage - 1) }))}
+                disabled={currentPage === 0}
+                className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm flex items-center space-x-1"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span>Previous</span>
+              </button>
+
+              <div className="text-xs text-gray-600 font-medium">
+                Files: Page <span className="font-bold">{currentPage + 1}</span> of <span className="font-bold">{totalFilePages}</span>
+                {' • '}
+                <span className="text-gray-500">{batch.files.length} total</span>
+              </div>
+
+              <button
+                onClick={() => setBatchFilePages(prev => ({ ...prev, [batchId]: Math.min(totalFilePages - 1, currentPage + 1) }))}
+                disabled={currentPage >= totalFilePages - 1}
+                className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm flex items-center space-x-1"
+              >
+                <span>Next</span>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       );
     } catch (err) {
@@ -510,7 +556,11 @@ export default function UploadPage() {
 
             {/* Active File Items */}
             <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-              {files.map((file) => (
+              {[...files].sort((a, b) => {
+                // Sort: uploading first, then pending, then completed, then failed
+                const statusOrder = { uploading: 0, pending: 1, completed: 2, failed: 3 };
+                return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+              }).map((file) => (
                 <div key={file.id} className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200 p-4">
                   <div className="flex items-start space-x-3">
                     {/* Thumbnail / Status Icon */}
@@ -642,33 +692,42 @@ export default function UploadPage() {
         )}
 
         {/* Section 3: Previous Batches */}
-        {previousBatches.length > 0 && (
-          <div className="mt-8 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Previous Batches</h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  {previousBatches.length} batch{previousBatches.length !== 1 ? 'es' : ''}
-                </p>
+        {previousBatches.length > 0 && (() => {
+          const totalBatchPages = Math.ceil(previousBatches.length / batchesPerPage);
+          const startIndex = batchPage * batchesPerPage;
+          const endIndex = startIndex + batchesPerPage;
+          const paginatedBatches = previousBatches.slice(startIndex, endIndex);
+          
+          return (
+            <div className="mt-8 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Previous Batches</h2>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {previousBatches.length} batch{previousBatches.length !== 1 ? 'es' : ''}
+                    {totalBatchPages > 1 && ` • Page ${batchPage + 1} of ${totalBatchPages}`}
+                  </p>
+                </div>
+                <button
+                  onClick={clearPreviousBatches}
+                  className="text-sm text-gray-600 hover:text-red-600 font-medium transition-colors flex items-center space-x-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>Clear All Previous</span>
+                </button>
               </div>
-              <button
-                onClick={clearPreviousBatches}
-                className="text-sm text-gray-600 hover:text-red-600 font-medium transition-colors flex items-center space-x-1"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <span>Clear All Previous</span>
-              </button>
-            </div>
-            <div className="max-h-96 overflow-y-auto pr-2 space-y-6">
-              {previousBatches.map((batch, index) => {
+              <div className="space-y-6">
+                {paginatedBatches.map((batch, paginatedIndex) => {
+                // Calculate original index in full array for batch numbering (outside try so it's accessible in catch)
+                const originalIndex = startIndex + paginatedIndex;
+                
                 try {
                   if (!batch || !batch.id) {
-                    debugWarn(`Invalid batch at index ${index}:`, batch);
+                    debugWarn(`Invalid batch at paginated index ${paginatedIndex}:`, batch);
                     return null;
                   }
-
                   const completedCount = batch?.files?.filter((f) => f?.status === 'completed').length || 0;
                   const failedCount = batch?.files?.filter((f) => f?.status === 'failed').length || 0;
                   const timeStr = batch?.totalUploadTimeSeconds !== undefined 
@@ -678,23 +737,55 @@ export default function UploadPage() {
                   return (
                     <div key={batch.id} className="border-l-4 border-gray-300 pl-4">
                       <p className="text-sm font-medium text-gray-700 mb-3">
-                        Batch {previousBatches.length - index} • {completedCount} completed, {failedCount} failed{timeStr}
+                        Batch {previousBatches.length - originalIndex} • {completedCount} completed, {failedCount} failed{timeStr}
                       </p>
                       {renderBatchFiles(batch)}
                     </div>
                   );
                 } catch (err) {
-                  debugError(`Error rendering previous batch at index ${index}:`, err, { batch });
+                  debugError(`Error rendering previous batch at paginated index ${paginatedIndex}:`, err, { batch });
                   return (
-                    <div key={`error-${index}`} className="border-l-4 border-red-300 pl-4 bg-red-50 p-2 rounded">
+                    <div key={`error-${originalIndex}`} className="border-l-4 border-red-300 pl-4 bg-red-50 p-2 rounded">
                       <p className="text-sm text-red-600">Error rendering batch</p>
                     </div>
                   );
                 }
-              })}
+                })}
+              </div>
+              
+              {/* Batch Pagination */}
+              {totalBatchPages > 1 && (
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => setBatchPage(Math.max(0, batchPage - 1))}
+                    disabled={batchPage === 0}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 font-medium flex items-center space-x-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>Previous</span>
+                  </button>
+
+                  <div className="text-sm text-gray-700 font-medium">
+                    Page <span className="font-bold">{batchPage + 1}</span> of <span className="font-bold">{totalBatchPages}</span>
+                  </div>
+
+                  <button
+                    onClick={() => setBatchPage(Math.min(totalBatchPages - 1, batchPage + 1))}
+                    disabled={batchPage >= totalBatchPages - 1}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 font-medium flex items-center space-x-1"
+                  >
+                    <span>Next</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Empty State */}
         {files.length === 0 && !lastBatch && previousBatches.length === 0 && !error && (

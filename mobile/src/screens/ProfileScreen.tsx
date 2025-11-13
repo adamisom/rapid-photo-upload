@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
-import { redirect } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const { user, logout, isLoading } = useAuth();
+  const router = useRouter();
 
   const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -14,7 +15,7 @@ export default function ProfileScreen() {
         onPress: async () => {
           try {
             await logout();
-            redirect('/(auth)/login');
+            router.replace('/(auth)/login');
           } catch (error) {
             console.error('Logout error:', error);
             alert('Failed to logout');

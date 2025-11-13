@@ -420,7 +420,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
       const completedQueue: Array<{ photoId: string; fileSize: number }> = [];
       const BATCH_COMPLETE_SIZE = 5; // Send batch every 5 completions
       const BATCH_COMPLETE_INTERVAL = 1000; // Or every 1 second
-      let batchCompleteTimer: NodeJS.Timeout | null = null;
+      let batchCompleteTimer: ReturnType<typeof setInterval> | null = null;
       let lastBatchCompleteTime = Date.now();
       
       // Flush completed queue to backend
@@ -619,7 +619,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
         };
       });
     }
-  }, [uploadState, maxConcurrent, updateFileProgress, updateFileStatus, uploadStartTime]);
+  }, [uploadState, maxConcurrent, updateFileProgress, updateFileStatus]);
 
   const cancelUpload = useCallback(() => {
     setIsUploading(false);

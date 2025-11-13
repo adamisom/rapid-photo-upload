@@ -16,7 +16,7 @@ export default function GalleryScreen() {
   const [tagErrors, setTagErrors] = useState<{ [key: string]: string }>({});
   const [showSuggestions, setShowSuggestions] = useState<{ [key: string]: boolean }>({});
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
-  const pageSize = 20;
+  const pageSize = 15;
 
   // Get all unique tags from user's photos for autocomplete
   const getAllUserTags = (): string[] => {

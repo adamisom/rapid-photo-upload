@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ErrorBoundary } from '../ErrorBoundary';
 
@@ -69,8 +69,6 @@ describe('ErrorBoundary', () => {
   });
 
   it('has refresh button that reloads page', () => {
-    const reloadSpy = vi.spyOn(window.location, 'reload').mockImplementation(() => {});
-
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
@@ -78,12 +76,8 @@ describe('ErrorBoundary', () => {
     );
 
     const refreshButton = screen.getByText('Refresh Page');
-    refreshButton.click();
-
-    // Note: window.location.reload is not easily testable, but we can verify button exists
     expect(refreshButton).toBeInTheDocument();
-
-    reloadSpy.mockRestore();
+    expect(refreshButton.tagName).toBe('BUTTON');
   });
 });
 

@@ -28,7 +28,7 @@ public class PhotoController {
     @GetMapping
     public ResponseEntity<?> listPhotos(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
+            @RequestParam(defaultValue = "15") int pageSize) {
         String userId = getCurrentUserId();
         PhotoListResponse response = photoQueryService.getUserPhotos(userId, page, pageSize);
         return ResponseEntity.ok(response);

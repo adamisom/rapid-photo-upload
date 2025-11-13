@@ -16,7 +16,7 @@ export default function GalleryPage() {
   const [showSuggestions, setShowSuggestions] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState(0);
   const [totalPhotos, setTotalPhotos] = useState(0);
-  const pageSize = 20;
+  const pageSize = 15;
 
   // Get all unique tags from user's photos for autocomplete
   const getAllUserTags = (): string[] => {

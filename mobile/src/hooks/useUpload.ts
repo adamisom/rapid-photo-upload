@@ -367,7 +367,7 @@ export const useUpload = (maxConcurrent: number = 20) => {
       if (totalUploadTimeSeconds > 0) {
         console.log(`✅ Batch upload completed in ${totalUploadTimeSeconds.toFixed(2)} seconds (${pendingFiles.length} files)`);
       }
-    } catch (err) {
+    } catch {
       setIsPreparing(false);
     } finally {
       setIsUploading(false);
