@@ -4,6 +4,7 @@ import com.rapid.domain.Photo;
 import com.rapid.domain.PhotoStatus;
 import com.rapid.domain.UploadBatch;
 import com.rapid.domain.User;
+import com.rapid.features.upload.dto.BatchCompleteRequest;
 import com.rapid.features.upload.dto.InitiateUploadRequest;
 import com.rapid.features.upload.dto.InitiateUploadResponse;
 import com.rapid.features.upload.dto.UploadCompleteRequest;
@@ -55,7 +56,7 @@ public class UploadCommandService {
         limitsService.checkStorageLimit();
         
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new RuntimeException("User not found: " + userId));
         
         // Create or fetch batch
         UploadBatch batch;
@@ -165,6 +166,93 @@ public class UploadCommandService {
         uploadBatchRepository.save(batch);
         
         log.debug("Batch updated: batchId={}, failedCount={}", batch.getId(), batch.getFailedCount());
+    }
+    
+    /**
+     * Batch complete uploads: Process multiple upload completions in one transaction
+     * This is more efficient than calling completeUpload multiple times
+     * 
+     * @param userId User ID
+     * @param request Batch complete request with list of items
+     * @return Number of successfully processed items
+     */
+    @Transactional
+    public int batchCompleteUpload(String userId, BatchCompleteRequest request) {
+        log.info("Batch complete upload: userId={}, itemCount={}", userId, request.getItems().size());
+        
+        int successCount = 0;
+        String batchId = null;
+        
+        for (BatchCompleteRequest.CompleteItem item : request.getItems()) {
+            try {
+                Photo photo = photoRepository.findByIdAndUserId(item.getPhotoId(), userId)
+                    .orElseThrow(() -> new RuntimeException("Photo not found: " + item.getPhotoId()));
+                
+                // Skip if already completed (idempotency)
+                if (photo.getStatus() == PhotoStatus.UPLOADED) {
+                    log.debug("Photo already completed, skipping: photoId={}", item.getPhotoId());
+                    successCount++;
+                    if (batchId == null) {
+                        batchId = photo.getBatch().getId();
+                    }
+                    continue;
+                }
+                
+                // Verify file exists in S3
+                if (!s3Service.verifyFileExists(userId, photo.getS3Key())) {
+                    log.error("S3 verification failed: file not found - photoId={}, s3Key={}", 
+                        item.getPhotoId(), photo.getS3Key());
+                    photo.setStatus(PhotoStatus.FAILED);
+                    photo.setErrorMessage("File not found in S3");
+                    photoRepository.save(photo);
+                    continue; // Skip this item, continue with others
+                }
+                
+                // Verify file size
+                long actualSize = s3Service.getFileSizeBytes(userId, photo.getS3Key());
+                if (actualSize != item.getFileSizeBytes()) {
+                    log.error("Size mismatch: expected={}, actual={}, photoId={}", 
+                        item.getFileSizeBytes(), actualSize, item.getPhotoId());
+                    photo.setStatus(PhotoStatus.FAILED);
+                    photo.setErrorMessage("File size mismatch");
+                    photoRepository.save(photo);
+                    continue; // Skip this item, continue with others
+                }
+                
+                // Update photo status
+                photo.setStatus(PhotoStatus.UPLOADED);
+                photoRepository.save(photo);
+                
+                // Track batch for count update
+                if (batchId == null) {
+                    batchId = photo.getBatch().getId();
+                }
+                
+                successCount++;
+                
+            } catch (Exception e) {
+                log.error("Error processing batch complete item: photoId={}, error={}", 
+                    item.getPhotoId(), e.getMessage(), e);
+                // Continue with next item (don't fail entire batch)
+            }
+        }
+        
+        // Update batch completed count (single update for all successful items)
+        if (batchId != null && successCount > 0) {
+            UploadBatch batch = uploadBatchRepository.findByIdAndUserId(batchId, userId)
+                .orElse(null);
+            if (batch != null) {
+                batch.setCompletedCount(batch.getCompletedCount() + successCount);
+                uploadBatchRepository.save(batch);
+                log.info("Batch updated: batchId={}, addedCompletedCount={}, newCompletedCount={}", 
+                    batchId, successCount, batch.getCompletedCount());
+            }
+        }
+        
+        log.info("Batch complete finished: userId={}, totalItems={}, successCount={}", 
+            userId, request.getItems().size(), successCount);
+        
+        return successCount;
     }
 }
 

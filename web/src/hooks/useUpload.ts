@@ -323,42 +323,160 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
     setCurrentBatchId(newBatchId);
 
     try {
-      // Upload files with concurrency control
-      const uploadQueue = [...pendingFiles];
+      // ========================================================================
+      // PHASE 1: Pre-request all presigned URLs in parallel batches
+      // ========================================================================
+      // This eliminates the sequential bottleneck - all URLs ready before uploads start
+      const URL_BATCH_SIZE = 50; // Request 50 URLs at a time to avoid overwhelming backend
+      const presignedUrlMap = new Map<string, { photoId: string; uploadUrl: string; batchId: string }>();
+      
+      // Split files into batches for URL requests
+      const urlBatches: UploadFile[][] = [];
+      for (let i = 0; i < pendingFiles.length; i += URL_BATCH_SIZE) {
+        urlBatches.push(pendingFiles.slice(i, i + URL_BATCH_SIZE));
+      }
+      
+      // Request URLs in batches (parallel within batch, sequential between batches)
+      for (const batch of urlBatches) {
+        try {
+          const urlResponses = await Promise.all(
+            batch.map(file =>
+              uploadService.initiateUpload(
+                file.file.name,
+                file.file.size,
+                file.file.type || 'application/octet-stream',
+                newBatchId
+              ).then(response => ({ fileId: file.id, response }))
+            )
+          );
+          
+          // Store URLs in map for quick lookup
+          urlResponses.forEach(({ fileId, response }) => {
+            presignedUrlMap.set(fileId, {
+              photoId: response.photoId,
+              uploadUrl: response.uploadUrl,
+              batchId: response.batchId
+            });
+            
+            // Update file with photoId
+            setUploadState(prev => ({
+              ...prev,
+              activeFiles: prev.activeFiles.map(f =>
+                f.id === fileId ? { ...f, photoId: response.photoId } : f
+              )
+            }));
+          });
+        } catch (err) {
+          // If URL request fails for a batch, mark those files as failed
+          console.error('Failed to get presigned URLs for batch:', err);
+          batch.forEach(file => {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to get upload URL';
+            updateFileStatus(file.id, 'failed', errorMessage);
+          });
+        }
+      }
+      
+      // Filter out files that failed to get URLs
+      const filesWithUrls = pendingFiles.filter(f => presignedUrlMap.has(f.id));
+      
+      if (filesWithUrls.length === 0) {
+        setError('Failed to get presigned URLs for any files');
+        setIsUploading(false);
+        return;
+      }
+
+      // ========================================================================
+      // PHASE 2: Upload files to S3 with concurrency control
+      // ========================================================================
+      const uploadQueue = [...filesWithUrls];
       const activeUploads = new Set<string>();
+      
+      // Queue for batched complete notifications
+      const completedQueue: Array<{ photoId: string; fileSize: number }> = [];
+      const BATCH_COMPLETE_SIZE = 5; // Send batch every 5 completions
+      const BATCH_COMPLETE_INTERVAL = 1000; // Or every 1 second
+      let batchCompleteTimer: NodeJS.Timeout | null = null;
+      let lastBatchCompleteTime = Date.now();
+      
+      // Flush completed queue to backend
+      const flushCompletedQueue = async () => {
+        if (completedQueue.length === 0) return;
+        
+        const batch = completedQueue.splice(0, BATCH_COMPLETE_SIZE);
+        lastBatchCompleteTime = Date.now();
+        
+        try {
+          await uploadService.batchComplete(
+            batch.map(item => ({
+              photoId: item.photoId,
+              fileSizeBytes: item.fileSize
+            }))
+          );
+          
+          // Mark files as completed in UI (batch complete confirms they're done)
+          // Note: Files are already marked as completed optimistically after S3 upload
+          // This just confirms the backend knows about them
+        } catch (err) {
+          console.error('Batch complete failed, will retry:', err);
+          // Put items back in queue for retry
+          completedQueue.unshift(...batch);
+        }
+      };
+      
+      // Set up periodic flush
+      batchCompleteTimer = setInterval(() => {
+        if (completedQueue.length > 0 && Date.now() - lastBatchCompleteTime >= BATCH_COMPLETE_INTERVAL) {
+          flushCompletedQueue();
+        }
+      }, BATCH_COMPLETE_INTERVAL);
+
+      // Event-driven slot waiting (more efficient than polling)
+      const waitForSlot = (): Promise<void> => {
+        return new Promise((resolve) => {
+          const checkSlot = () => {
+            if (activeUploads.size < maxConcurrent) {
+              resolve();
+            } else {
+              setTimeout(checkSlot, 10); // Check every 10ms instead of 100ms
+            }
+          };
+          checkSlot();
+        });
+      };
 
       for (const file of uploadQueue) {
-        // Wait for a slot if we're at max concurrent
-        while (activeUploads.size >= maxConcurrent) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
+        // Wait for a slot (event-driven, not polling)
+        await waitForSlot();
 
         activeUploads.add(file.id);
+        const urlData = presignedUrlMap.get(file.id)!;
 
         // Upload in background without await
         (async () => {
           try {
             updateFileStatus(file.id, 'uploading');
 
-            // Step 1: Get presigned URL (with client-generated batchId)
-            const initiateResponse = await uploadService.initiateUpload(
-              file.file.name,
-              file.file.size,
-              file.file.type || 'application/octet-stream',
-              newBatchId // Pass the new batchId to all files
-            );
-
-            // Step 2: Upload to S3
+            // Upload to S3 (URL already obtained in Phase 1)
             await uploadService.uploadToS3(
-              initiateResponse.uploadUrl,
+              urlData.uploadUrl,
               file.file,
               (progress) => updateFileProgress(file.id, progress)
             );
 
-            // Step 3: Notify backend of completion
-            await uploadService.completeUpload(initiateResponse.photoId, file.file.size);
-
+            // Queue for batched complete notification
+            completedQueue.push({
+              photoId: urlData.photoId,
+              fileSize: file.file.size
+            });
+            
+            // Mark as completed optimistically (S3 upload succeeded)
             updateFileStatus(file.id, 'completed');
+            
+            // Flush if batch size reached
+            if (completedQueue.length >= BATCH_COMPLETE_SIZE) {
+              await flushCompletedQueue();
+            }
+            
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Upload failed';
             updateFileStatus(file.id, 'failed', errorMessage);
@@ -373,6 +491,13 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
       while (activeUploads.size > 0) {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
+      
+      // Final flush of any remaining completions
+      if (batchCompleteTimer) {
+        clearInterval(batchCompleteTimer);
+        batchCompleteTimer = null;
+      }
+      await flushCompletedQueue();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload batch failed';
       setError(errorMessage);

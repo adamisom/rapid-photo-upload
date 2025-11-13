@@ -17,6 +17,8 @@ import type {
   InitiateUploadResponse,
   UploadCompleteRequest,
   BatchStatusResponse,
+  BatchCompleteRequest,
+  BatchCompleteResponse,
 } from '../types';
 
 export const uploadService = {
@@ -70,6 +72,17 @@ export const uploadService = {
     await apiClient.post(`/api/upload/failed/${photoId}`, {
       errorMessage,
     });
+  },
+
+  /**
+   * Batch complete uploads: Notify backend of multiple upload completions
+   * More efficient than calling completeUpload multiple times
+   * @param items Array of {photoId, fileSizeBytes, eTag?} items
+   */
+  batchComplete: async (items: Array<{photoId: string; fileSizeBytes: number; eTag?: string}>): Promise<BatchCompleteResponse> => {
+    const request: BatchCompleteRequest = { items };
+    const response = await apiClient.post<BatchCompleteResponse>('/api/upload/complete/batch', request);
+    return response.data;
   },
 
   /**

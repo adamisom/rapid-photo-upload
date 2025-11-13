@@ -111,6 +111,22 @@ export interface UploadCompleteRequest {
   eTag?: string;
 }
 
+export interface BatchCompleteItem {
+  photoId: string;
+  fileSizeBytes: number;
+  eTag?: string;
+}
+
+export interface BatchCompleteRequest {
+  items: BatchCompleteItem[];
+}
+
+export interface BatchCompleteResponse {
+  status: 'success';
+  processed: number;
+  total: number;
+}
+
 export interface UploadFailedRequest {
   errorMessage: string;
 }

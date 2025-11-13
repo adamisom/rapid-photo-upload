@@ -1,5 +1,6 @@
 package com.rapid.features.upload.controller;
 
+import com.rapid.features.upload.dto.BatchCompleteRequest;
 import com.rapid.features.upload.dto.BatchStatusResponse;
 import com.rapid.features.upload.dto.InitiateUploadRequest;
 import com.rapid.features.upload.dto.InitiateUploadResponse;
@@ -40,6 +41,18 @@ public class UploadController {
         String userId = getCurrentUserId();
         uploadCommandService.completeUpload(userId, photoId, request);
         return ResponseEntity.ok(Map.of("status", "success"));
+    }
+    
+    @PostMapping("/complete/batch")
+    public ResponseEntity<?> batchCompleteUpload(
+            @Valid @RequestBody BatchCompleteRequest request) {
+        String userId = getCurrentUserId();
+        int processedCount = uploadCommandService.batchCompleteUpload(userId, request);
+        return ResponseEntity.ok(Map.of(
+            "status", "success",
+            "processed", processedCount,
+            "total", request.getItems().size()
+        ));
     }
     
     @PostMapping("/failed/{photoId}")

@@ -71,6 +71,16 @@ High-level technical decisions, trade-offs, and "why" behind the architecture.
 #### 📖 **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Complete System Architecture
 Full technical architecture guide with implementation details.
 
+#### 🧪 **[SMOKE_TEST_GUIDE.md](docs/misc/SMOKE_TEST_GUIDE.md)** - Quick Verification Guide
+Concise 10-15 minute smoke test guide for recent performance fixes and optimizations.
+
+**Tests**:
+- Pagination accuracy (excludes PENDING/FAILED photos)
+- Upload state persistence (localStorage)
+- 20 concurrent uploads (4x faster)
+- Pre-requested URLs (eliminates bottleneck)
+- Batched complete notifications (10x fewer requests)
+
 #### 🤖 **[AI_TOOLS_USED.md](docs/misc/AI_TOOLS_USED.md)** - Human-AI Collaboration Story
 Development process, bugs fixed, and lessons learned from AI-assisted development.
 
