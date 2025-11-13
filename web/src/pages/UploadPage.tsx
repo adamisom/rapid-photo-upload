@@ -373,39 +373,53 @@ export default function UploadPage() {
             )}
 
             {/* Overall Progress */}
-            {isUploading && (
+            {(isUploading || isPreparing) && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Overall Progress</p>
-                    <p className="text-lg font-bold text-gray-900 mt-1">
-                      {files.filter((f) => f.status === 'completed').length} of {files.length} files uploaded successfully
+                    <p className="text-sm font-medium text-gray-600">
+                      {isPreparing ? 'Preparing upload...' : 'Overall Progress'}
                     </p>
-                    {files.filter((f) => f.status === 'failed').length > 0 && (
-                      <p className="text-sm text-red-600 mt-1">
-                        {files.filter((f) => f.status === 'failed').length} failed
+                    {isPreparing ? (
+                      <p className="text-lg font-bold text-gray-900 mt-1">
+                        Requesting upload URLs for {files.length} file{files.length !== 1 ? 's' : ''}...
                       </p>
+                    ) : (
+                      <>
+                        <p className="text-lg font-bold text-gray-900 mt-1">
+                          {files.filter((f) => f.status === 'completed').length} of {files.length} files uploaded successfully
+                        </p>
+                        {files.filter((f) => f.status === 'failed').length > 0 && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {files.filter((f) => f.status === 'failed').length} failed
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-blue-600">{Math.round(totalProgress)}%</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {files.length >= 50 
-                        ? 'uploading in batches of 20'
-                        : `${files.filter((f) => f.status === 'uploading').length} uploading`}
-                    </p>
-                    {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && (
-                      <p className="text-xs text-gray-600 mt-1 font-medium">
-                        ~{formatTimeRemaining(estimatedTimeRemaining)} remaining
+                  {!isPreparing && (
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-blue-600">{Math.round(totalProgress)}%</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {files.length >= 50 
+                          ? 'uploading in batches of 20'
+                          : `${files.filter((f) => f.status === 'uploading').length} uploading`}
                       </p>
-                    )}
-                  </div>
+                      {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && (
+                        <p className="text-xs text-gray-600 mt-1 font-medium">
+                          ~{formatTimeRemaining(estimatedTimeRemaining)} remaining
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <ProgressBar
-                  progress={totalProgress}
-                  size="lg"
-                  showPercentage={false}
-                />
+                {!isPreparing && (
+                  <ProgressBar
+                    progress={totalProgress}
+                    size="lg"
+                    showPercentage={false}
+                  />
+                )}
               </div>
             )}
 
