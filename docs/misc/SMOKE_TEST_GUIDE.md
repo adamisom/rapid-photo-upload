@@ -1,6 +1,10 @@
-# Smoke Test Guide - Recent Performance Fixes & Optimizations
+# Testing Guide - Recent Performance Fixes & Optimizations
 
-Quick verification guide for all recent changes. **Time: 10-15 minutes**
+Comprehensive testing guide for recent changes: pagination fixes, state persistence, 20 concurrent uploads, pre-requested URLs, and batched completes.
+
+**Quick Smoke Tests**: 10-15 minutes  
+**Comprehensive Tests**: 15-30 minutes  
+**Large Batch Testing (1000+)**: 30-60 minutes
 
 ---
 
@@ -179,7 +183,9 @@ Run through these quickly:
 
 ---
 
-## 🐛 Quick Troubleshooting
+## 🐛 Troubleshooting
+
+### Quick Reference
 
 | Issue | Check |
 |-------|-------|
@@ -189,18 +195,52 @@ Run through these quickly:
 | URLs sequential? | Check Network tab - should see burst at start |
 | No batched completes? | Check Network tab - should see `/complete/batch` |
 
+### Detailed Troubleshooting
+
+#### Pagination Still Wrong?
+- **Check**: Backend logs - should use `findByUserIdAndStatus(userId, UPLOADED, pageable)`
+- **Verify**: Database has PENDING photos that shouldn't be counted
+- **Fix**: Restart backend to ensure new code is running
+
+#### State Not Persisting?
+- **Check**: Browser localStorage is enabled
+- **Check**: Not in incognito/private mode
+- **Verify**: `localStorage.getItem('rapidphoto_upload_state')` returns data
+- **Fix**: Clear localStorage and try again
+
+#### Still Only 5 Concurrent?
+- **Check**: `web/src/pages/UploadPage.tsx` uses `useUpload(20)`
+- **Check**: `web/src/hooks/useUpload.ts` default is 20
+- **Verify**: Network tab shows 20 concurrent PUT requests
+- **Fix**: Restart frontend dev server
+
+#### Browser won't select 1000+ files
+- **Solution**: Some browsers limit file selection. Use drag & drop or select in batches of 500
+
+#### Uploads failing
+- **Check**: Backend is running
+- **Check**: S3 credentials are correct
+- **Check**: Network connection is stable
+- **Check**: Browser console for errors
+
 ---
 
-## 📊 Expected Performance
+## 📊 Performance Benchmarks
 
-| Batch Size | Time (Before) | Time (After) | Improvement |
-|------------|---------------|--------------|-------------|
-| 50 files | ~10 min | ~2.5 min | **75% faster** |
-| 100 files | ~20 min | ~5 min | **75% faster** |
-| 500 files | ~100 min | ~25 min | **75% faster** |
-| 1000 files | ~200 min | ~50 min | **75% faster** |
+### Before Optimizations
+- 100 files: ~10 minutes
+- 500 files: ~50 minutes
+- 1000 files: ~100 minutes (1.6 hours)
 
-*Note: Actual times depend on file sizes and network speed*
+### After Optimizations (20 concurrent + pre-request URLs + batched completes)
+- 100 files: ~2.5 minutes (**75% faster**)
+- 500 files: ~12.5 minutes (**75% faster**)
+- 1000 files: ~25 minutes (**75% faster**)
+
+**Note**: Actual times depend on:
+- File sizes (larger = slower)
+- Network upload speed
+- Backend/S3 response times
 
 ---
 
@@ -216,17 +256,236 @@ All tests pass if:
 
 ---
 
-## 🚀 Ready for Production Testing
+---
 
-After passing these smoke tests:
-1. Test with 1000+ files (see LARGE_BATCH_TESTING.md)
-2. Monitor performance metrics
-3. Verify error handling with network issues
-4. Test on different browsers/devices
+## 🧪 Comprehensive Testing (15-30 minutes)
+
+### Full Integration Test
+
+**Setup**:
+1. Start backend: `cd backend && ./mvnw spring-boot:run`
+2. Start frontend: `cd web && npm run dev`
+3. Open browser: http://localhost:5173
+
+**Test Sequence**:
+
+#### Step 1: Upload Batch
+1. Register new account
+2. Go to Upload page
+3. Select 30-50 images
+4. Click "Start Upload"
+5. **Monitor**: Should see 20 concurrent uploads in Network tab
+
+#### Step 2: Test State Persistence
+1. **While uploads are happening**, navigate to Gallery
+2. Check Gallery (should show completed photos)
+3. Navigate back to Upload
+4. **Verify**: Upload state preserved, progress continues
+
+#### Step 3: Test Pagination
+1. Wait for all uploads to complete
+2. Go to Gallery
+3. Check pagination:
+   - Total count should match uploaded photos
+   - If you have 50 photos, should show "50 photos total"
+   - Pagination should work correctly (20 per page)
+
+#### Step 4: Test Edge Cases
+1. Upload 10 more photos
+2. **Stop backend** mid-upload (Ctrl+C)
+3. Some uploads should fail
+4. **Restart backend**
+5. Go to Gallery
+6. **Verify**: Only successful uploads are counted
+7. Failed uploads should NOT be in pagination count
 
 ---
 
-**Time to complete**: 10-15 minutes  
+## 📦 Large Batch Testing (1000+ Files)
+
+### Recommended Datasets
+
+#### Option 1: Natural Images Dataset (Recommended) ⭐
+
+**Best for photo upload testing** - Contains real-world photos similar to what users would upload.
+
+**Kaggle Dataset**: [Natural Images](https://www.kaggle.com/datasets/prasunroy/natural-images)
+
+**Details**:
+- **Size**: ~8,000+ images
+- **Format**: JPG/PNG
+- **Categories**: Animals, Fruits, Flowers, People, etc.
+- **File Sizes**: Varies (typical photo sizes)
+- **Download**: Requires Kaggle account (free)
+
+**Download Instructions**:
+```bash
+# Install Kaggle CLI
+pip install kaggle
+
+# Download Natural Images dataset
+kaggle datasets download -d prasunroy/natural-images
+
+# Extract
+unzip natural-images.zip
+
+# Count images (verify you have 1000+)
+find natural-images -type f \( -name "*.jpg" -o -name "*.png" -o -name "*.jpeg" \) | wc -l
+```
+
+**Why This Dataset**:
+- ✅ Real-world photos (not synthetic)
+- ✅ Reasonable file sizes
+- ✅ Good variety of content
+- ✅ Perfect for testing 1000+ uploads
+
+#### Option 2: Caltech 101
+
+**Large, diverse image collection** - Good for stress testing.
+
+**Dataset**: [Caltech 101](http://www.vision.caltech.edu/Image_Datasets/Caltech101/)
+
+**Details**:
+- **Size**: 9,146 images
+- **Format**: JPG
+- **Categories**: 101 object categories
+- **File Sizes**: ~300x200 pixels average
+- **Download**: Direct download (no account needed)
+
+**Download Instructions**:
+1. Visit: http://www.vision.caltech.edu/Image_Datasets/Caltech101/
+2. Download: `101_ObjectCategories.tar.gz` (~131 MB)
+3. Extract: `tar -xzf 101_ObjectCategories.tar.gz`
+
+### Quick Start Large Batch Testing
+
+#### Step 1: Prepare Test Directory
+
+```bash
+# Create test directory
+mkdir -p ~/rapidphoto-test-images
+
+# Copy first 1000 images (or all if you want more)
+find natural-images -type f \( -name "*.jpg" -o -name "*.png" -o -name "*.jpeg" \) | head -1000 | xargs -I {} cp {} ~/rapidphoto-test-images/
+
+# Verify count
+ls ~/rapidphoto-test-images | wc -l
+```
+
+#### Step 2: Test Upload
+
+1. **Start the application** (backend + frontend)
+2. **Login/Register** in the web app
+3. **Navigate to Upload page**
+4. **Select all images** from `~/rapidphoto-test-images/`
+   - Drag & drop entire folder, or
+   - Use file picker (may need to select in batches if browser limits)
+5. **Click "Start Upload"**
+6. **Monitor**:
+   - Progress bars (should show 20 concurrent uploads)
+   - Total progress percentage
+   - Estimated time remaining
+   - Individual file status
+
+#### Step 3: Verify Results
+
+1. **Check Gallery**:
+   - All photos should appear
+   - Pagination should work correctly
+   - Total count should match uploaded count
+
+2. **Navigate Away & Back**:
+   - Go to Gallery
+   - Return to Upload page
+   - Upload state should persist (completed files visible)
+
+3. **Check Database**:
+   ```bash
+   docker exec rapidphoto-postgres psql -U postgres -d rapidphoto_dev \
+     -c "SELECT COUNT(*) FROM photos WHERE status = 'UPLOADED';"
+   ```
+
+4. **Check S3**:
+   ```bash
+   aws s3 ls s3://your-bucket-name/ --recursive | wc -l
+   ```
+
+### Expected Performance (1000+ Files)
+
+With **optimizations** (pre-request URLs + batched completes):
+
+| Batch Size | Expected Time | Notes |
+|------------|---------------|-------|
+| 100 images | ~2-3 minutes | Quick test |
+| 500 images | ~8-12 minutes | Medium batch |
+| 1,000 images | ~15-20 minutes | Large batch |
+| 2,000 images | ~30-40 minutes | Very large batch |
+
+**Factors affecting speed**:
+- Network upload speed
+- File sizes (larger files = longer)
+- Backend response time
+- S3 upload speed
+
+### Large Batch Testing Scenarios
+
+#### Scenario 1: Large Batch Upload
+- **Action**: Upload 1,000+ images
+- **Verify**: All upload successfully, no errors
+- **Check**: Pagination shows correct total count
+
+#### Scenario 2: Navigation Persistence
+- **Action**: Upload 500 images, navigate to Gallery, return to Upload
+- **Verify**: Upload state persists (completed files visible)
+- **Check**: Can see which files completed/failed
+
+#### Scenario 3: Pagination Accuracy
+- **Action**: Upload 1,500 images (hitting the limit)
+- **Verify**: Gallery pagination shows correct page counts
+- **Check**: Total count matches uploaded count (not including PENDING/FAILED)
+
+#### Scenario 4: Concurrent Upload Stress
+- **Action**: Upload 2,000 images
+- **Verify**: 20 uploads happen simultaneously
+- **Check**: No browser crashes, memory usage reasonable
+- **Monitor**: Network tab shows 20 concurrent PUT requests
+
+#### Scenario 5: Error Recovery
+- **Action**: Stop backend mid-upload, restart
+- **Verify**: Failed uploads show error status
+- **Check**: Can retry failed uploads
+
+### Notes for Large Batch Testing
+
+1. **Dataset Size**: 1,000-2,000 images is sufficient for most testing. You don't need the full dataset.
+
+2. **File Selection**: If browser limits file selection, you can:
+   - Select in batches (500 at a time)
+   - Use drag & drop (may work better)
+   - Test with smaller batches first (100, 500, then 1000+)
+
+3. **Storage Limits**: The app has built-in limits:
+   - Max 1,500 photos total
+   - Max 500 MB total storage
+   - Max 100 MB per file
+
+4. **Testing Time**: Plan 30-60 minutes for a full 1000+ image upload test.
+
+---
+
+## 🚀 Ready for Production Testing
+
+After passing these tests:
+1. Monitor performance metrics
+2. Verify error handling with network issues
+3. Test on different browsers/devices
+4. Test with real-world usage patterns
+
+**Time to complete**: 
+- Quick smoke tests: 10-15 minutes
+- Comprehensive tests: 15-30 minutes
+- Large batch testing: 30-60 minutes
+
 **Critical tests**: Tests 1, 3, 4, 5 (verify core optimizations)
 
 ---
