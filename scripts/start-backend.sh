@@ -79,5 +79,11 @@ export PGUSER="${PGUSER:-postgres}"
 export PGPASSWORD="${PGPASSWORD:-postgres}"
 
 echo -e "${GREEN}   Database config: ${PGHOST}:${PGPORT}/${PGDATABASE}${NC}"
+echo -e "${GREEN}   JWT_SECRET: ${JWT_SECRET:+SET (${#JWT_SECRET} chars)}${NC}"
 
-./mvnw spring-boot:run
+# Pass database config as system properties to ensure Spring Boot reads them
+./mvnw spring-boot:run \
+  -Dspring.datasource.url="jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}" \
+  -Dspring.datasource.username="${PGUSER}" \
+  -Dspring.datasource.password="${PGPASSWORD}" \
+  -Djwt.secret="${JWT_SECRET}"
