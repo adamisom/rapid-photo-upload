@@ -1,6 +1,6 @@
 # RapidPhotoUpload - Architecture Guide
 
-**Status**: Phases 1-7 Complete (MVP Production Ready) | Documentation Current as of: November 9, 2025
+**Status**: Phases 1-7 Complete (MVP Production Ready) | Documentation Current as of: November 13, 2025
 
 ---
 
@@ -545,7 +545,7 @@ web/src/
 **Key Features**:
 - JWT token persistence in localStorage
 - S3 presigned URL uploads with progress tracking
-- Concurrency control (max 5-10 parallel uploads)
+- Concurrency control (max 20 parallel uploads)
 - Gallery with pagination, download, delete
 - Responsive design (mobile-first)
 
