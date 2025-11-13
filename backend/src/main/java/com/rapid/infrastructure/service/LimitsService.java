@@ -21,7 +21,7 @@ public class LimitsService {
     private static final int MAX_USERS = 50;
     private static final int MAX_PHOTOS = 1500;
     private static final long MAX_TOTAL_BYTES = 50L * 1024 * 1024 * 1024; // 50 GB (overall app total)
-    private static final long MAX_FILE_BYTES = (long)(1.1 * 1024 * 1024 * 1024);  // 1.1 GB
+    private static final long MAX_FILE_BYTES = 1100L * 1024 * 1024;  // 1.1 GB (1100 MB)
     
     private final UserRepository userRepository;
     private final PhotoRepository photoRepository;
