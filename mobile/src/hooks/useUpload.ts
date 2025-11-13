@@ -26,6 +26,7 @@ export interface UploadBatch {
   id: string;
   files: MobileUploadFile[];
   completedAt: Date;
+  totalUploadTimeSeconds?: number; // Time taken to upload entire batch (rounded to nearest 0.01s)
 }
 
 interface UploadState {
@@ -332,6 +333,14 @@ export const useUpload = (maxConcurrent: number = 20) => {
         batchCompleteTimer = null;
       }
       await flushCompletedQueue();
+      
+      // Calculate total upload time
+      const totalUploadTimeMs = uploadStartTime ? Date.now() - uploadStartTime : 0;
+      const totalUploadTimeSeconds = Math.round((totalUploadTimeMs / 1000) * 100) / 100; // Round to nearest 0.01s
+      
+      if (totalUploadTimeSeconds > 0) {
+        console.log(`✅ Batch upload completed in ${totalUploadTimeSeconds.toFixed(2)} seconds (${pendingFiles.length} files)`);
+      }
     } finally {
       setIsUploading(false);
       setUploadStartTime(null);
@@ -353,12 +362,17 @@ export const useUpload = (maxConcurrent: number = 20) => {
         const allFilesSucceeded = completedFilesFromBatch.length === pendingFiles.length;
         console.log('   All succeeded?', allFilesSucceeded);
         
+        // Calculate total upload time
+        const totalUploadTimeMs = uploadStartTime ? Date.now() - uploadStartTime : 0;
+        const totalUploadTimeSeconds = Math.round((totalUploadTimeMs / 1000) * 100) / 100; // Round to nearest 0.01s
+        
         // Only create batch if ALL files succeeded
         const newBatch: UploadBatch | null = allFilesSucceeded && completedFilesFromBatch.length > 0
           ? {
               id: newBatchId,
               files: completedFilesFromBatch,
-              completedAt: new Date()
+              completedAt: new Date(),
+              totalUploadTimeSeconds: totalUploadTimeSeconds > 0 ? totalUploadTimeSeconds : undefined
             }
           : null;
         
