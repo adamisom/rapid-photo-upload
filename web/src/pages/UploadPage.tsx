@@ -28,7 +28,7 @@ export default function UploadPage() {
     clearLastBatch, 
     clearPreviousBatches, 
     startUpload 
-  } = useUpload(5);
+  } = useUpload(20);
 
   // Derive lastBatch and previousBatches from single array
   const lastBatch = completedBatches[0] || null;
@@ -56,9 +56,22 @@ export default function UploadPage() {
     if (dropZoneRef.current) {
       dropZoneRef.current.classList.remove('bg-blue-50', 'border-blue-300');
     }
-    const droppedFiles = Array.from(e.dataTransfer.files).filter((file) =>
+    const allFiles = Array.from(e.dataTransfer.files);
+    const droppedFiles = allFiles.filter((file) =>
       file.type.startsWith('image/')
     );
+    
+    // Log if some files were filtered out
+    const nonImageCount = allFiles.length - droppedFiles.length;
+    if (nonImageCount > 0) {
+      console.warn(`Filtered out ${nonImageCount} non-image file(s) from drop`);
+    }
+    
+    // Log large batch drop
+    if (droppedFiles.length > 100) {
+      console.log(`Large batch dropped: ${droppedFiles.length} files`);
+    }
+    
     if (droppedFiles.length > 0) {
       addFiles(droppedFiles);
     }
@@ -66,7 +79,26 @@ export default function UploadPage() {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      addFiles(Array.from(e.target.files).filter((file) => file.type.startsWith('image/')));
+      const selectedFiles = Array.from(e.target.files);
+      const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
+      
+      // Log if some files were filtered out (not images)
+      const nonImageCount = selectedFiles.length - imageFiles.length;
+      if (nonImageCount > 0) {
+        console.warn(`Filtered out ${nonImageCount} non-image file(s)`);
+      }
+      
+      // Log large batch selection
+      if (imageFiles.length > 100) {
+        console.log(`Large batch selected: ${imageFiles.length} files`);
+      }
+      
+      if (imageFiles.length > 0) {
+        addFiles(imageFiles);
+      }
+      
+      // Reset input to allow selecting the same files again if needed
+      e.target.value = '';
     }
   };
 
@@ -143,6 +175,7 @@ export default function UploadPage() {
               <p className="text-xl font-bold text-gray-900">Drag and drop photos here</p>
               <p className="text-gray-500 mt-2">or <span className="text-blue-600 font-semibold">click to browse</span> your computer</p>
               <p className="text-xs text-gray-400 mt-3">Supports JPG, PNG, GIF, WebP up to 100MB per file</p>
+              <p className="text-xs text-gray-400 mt-1">Large batches (1000+ files) are supported - uploads process 5 at a time</p>
             </div>
           </div>
           <input
@@ -152,6 +185,8 @@ export default function UploadPage() {
             accept="image/*"
             onChange={handleFileSelect}
             className="hidden"
+            // Note: Browsers may have practical limits on file selection (varies by browser)
+            // For very large batches (1000+), consider splitting into multiple selections
           />
         </div>
 
@@ -305,7 +340,7 @@ export default function UploadPage() {
               <div className="space-y-3">
                 {files.length >= 6 && (
                   <p className="text-xs text-center text-gray-500 bg-blue-50 border border-blue-100 rounded-lg py-2 px-3">
-                    💡 Tip: Large batches upload 5 files at a time for optimal performance
+                    💡 Tip: Large batches upload 20 files at a time for optimal performance
                   </p>
                 )}
                 <button

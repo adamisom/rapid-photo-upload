@@ -50,18 +50,155 @@ interface UploadManager {
   reset: () => void;
 }
 
-export const useUpload = (maxConcurrent: number = 5): UploadManager => {
-  // Combined state for atomic updates
-  const [uploadState, setUploadState] = useState<UploadState>({
-    activeFiles: [],
-    completedBatches: []
+const STORAGE_KEY = 'rapidphoto_upload_state';
+
+// Helper to serialize upload state (File objects can't be serialized, so we store metadata)
+interface SerializableUploadFile {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  status: UploadFile['status'];
+  progress: number;
+  error?: string;
+}
+
+interface SerializableUploadState {
+  activeFiles: SerializableUploadFile[];
+  completedBatches: Array<{
+    id: string;
+    files: SerializableUploadFile[];
+    completedAt: string;
+  }>;
+  currentBatchId: string | null;
+  isUploading: boolean;
+  totalProgress: number;
+  estimatedTimeRemaining: number | null;
+  uploadStartTime: number | null;
+}
+
+const saveStateToStorage = (state: UploadState, currentBatchId: string | null, isUploading: boolean, totalProgress: number, estimatedTimeRemaining: number | null, uploadStartTime: number | null) => {
+  try {
+    const serializable: SerializableUploadState = {
+      activeFiles: state.activeFiles.map(f => ({
+        id: f.id,
+        fileName: f.file.name,
+        fileSize: f.file.size,
+        fileType: f.file.type,
+        status: f.status,
+        progress: f.progress,
+        error: f.error
+      })),
+      completedBatches: state.completedBatches.map(b => ({
+        id: b.id,
+        files: b.files.map(f => ({
+          id: f.id,
+          fileName: f.file.name,
+          fileSize: f.file.size,
+          fileType: f.file.type,
+          status: f.status,
+          progress: f.progress,
+          error: f.error
+        })),
+        completedAt: b.completedAt.toISOString()
+      })),
+      currentBatchId,
+      isUploading,
+      totalProgress,
+      estimatedTimeRemaining,
+      uploadStartTime
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+  } catch (err) {
+    console.warn('Failed to save upload state to localStorage:', err);
+  }
+};
+
+const loadStateFromStorage = (): Partial<SerializableUploadState> | null => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    return JSON.parse(stored) as SerializableUploadState;
+  } catch (err) {
+    console.warn('Failed to load upload state from localStorage:', err);
+    return null;
+  }
+};
+
+export const useUpload = (maxConcurrent: number = 20): UploadManager => {
+  // Initialize state from localStorage if available
+  const [uploadState, setUploadState] = useState<UploadState>(() => {
+    const stored = loadStateFromStorage();
+    if (stored) {
+      // Restore state - note: File objects can't be restored, so we create placeholder File objects
+      // These won't be usable for re-upload, but we can show their status
+      const activeFiles: UploadFile[] = stored.activeFiles.map(sf => {
+        // Create a minimal File-like object for display purposes
+        // Note: This won't work for actual file operations, but allows state display
+        const blob = new Blob([], { type: sf.fileType });
+        const file = new File([blob], sf.fileName, { type: sf.fileType });
+        Object.defineProperty(file, 'size', { value: sf.fileSize, writable: false });
+        
+        return {
+          id: sf.id,
+          file,
+          status: sf.status,
+          progress: sf.progress,
+          error: sf.error
+        };
+      });
+      
+      const completedBatches: UploadBatch[] = stored.completedBatches.map(b => ({
+        id: b.id,
+        files: b.files.map(sf => {
+          const blob = new Blob([], { type: sf.fileType });
+          const file = new File([blob], sf.fileName, { type: sf.fileType });
+          Object.defineProperty(file, 'size', { value: sf.fileSize, writable: false });
+          return {
+            id: sf.id,
+            file,
+            status: sf.status,
+            progress: sf.progress,
+            error: sf.error
+          };
+        }),
+        completedAt: new Date(b.completedAt)
+      }));
+      
+      return { activeFiles, completedBatches };
+    }
+    return {
+      activeFiles: [],
+      completedBatches: []
+    };
   });
-  const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  
+  const [currentBatchId, setCurrentBatchId] = useState<string | null>(() => {
+    const stored = loadStateFromStorage();
+    return stored?.currentBatchId || null;
+  });
+  const [isUploading, setIsUploading] = useState(() => {
+    const stored = loadStateFromStorage();
+    return stored?.isUploading || false;
+  });
   const [error, setError] = useState<string | null>(null);
-  const [totalProgress, setTotalProgress] = useState(0);
-  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
-  const [uploadStartTime, setUploadStartTime] = useState<number | null>(null);
+  const [totalProgress, setTotalProgress] = useState(() => {
+    const stored = loadStateFromStorage();
+    return stored?.totalProgress || 0;
+  });
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(() => {
+    const stored = loadStateFromStorage();
+    return stored?.estimatedTimeRemaining || null;
+  });
+  const [uploadStartTime, setUploadStartTime] = useState<number | null>(() => {
+    const stored = loadStateFromStorage();
+    return stored?.uploadStartTime || null;
+  });
+
+  // Persist state to localStorage whenever it changes
+  useEffect(() => {
+    saveStateToStorage(uploadState, currentBatchId, isUploading, totalProgress, estimatedTimeRemaining, uploadStartTime);
+  }, [uploadState, currentBatchId, isUploading, totalProgress, estimatedTimeRemaining, uploadStartTime]);
 
   // Recalculate progress during upload whenever files change status
   useEffect(() => {
@@ -327,6 +464,12 @@ export const useUpload = (maxConcurrent: number = 5): UploadManager => {
     setTotalProgress(0);
     setEstimatedTimeRemaining(null);
     setUploadStartTime(null);
+    // Clear localStorage
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (err) {
+      console.warn('Failed to clear upload state from localStorage:', err);
+    }
   }, []);
 
   return {

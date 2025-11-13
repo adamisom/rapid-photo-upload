@@ -33,7 +33,7 @@ interface UploadState {
   completedBatches: UploadBatch[];
 }
 
-export const useUpload = (maxConcurrent: number = 5) => {
+export const useUpload = (maxConcurrent: number = 20) => {
   // Combined state for atomic updates (prevents race conditions)
   const [uploadState, setUploadState] = useState<UploadState>({
     activeFiles: [],

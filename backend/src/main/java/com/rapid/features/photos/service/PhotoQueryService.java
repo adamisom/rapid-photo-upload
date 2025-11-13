@@ -42,10 +42,11 @@ public class PhotoQueryService {
     
     public PhotoListResponse getUserPhotos(String userId, int pageNumber, int pageSize) {
         Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by("createdAt").descending());
-        Page<Photo> page = photoRepository.findByUserId(userId, pageable);
+        // Filter by UPLOADED status in database query (fixes pagination bug)
+        // This ensures pagination counts only UPLOADED photos, not PENDING/FAILED ones
+        Page<Photo> page = photoRepository.findByUserIdAndStatus(userId, PhotoStatus.UPLOADED, pageable);
         
         List<PhotoDto> photoDtos = page.getContent().stream()
-            .filter(p -> p.getStatus() == PhotoStatus.UPLOADED)
             .map(p -> new PhotoDto(
                 p.getId(),
                 p.getOriginalFilename(),
@@ -56,6 +57,7 @@ public class PhotoQueryService {
             ))
             .collect(Collectors.toList());
         
+        // Use count from filtered query for accurate pagination
         return new PhotoListResponse(
             photoDtos,
             pageNumber,

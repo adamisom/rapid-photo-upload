@@ -97,7 +97,8 @@ rapid-photo-upload/
 ├── mobile/               # React Native + Expo (Phase 6)
 │   ├── package.json
 │   └── src/
-├── 100-test-images/      # Test images for upload testing
+├── 100-test-images/      # Test images for upload testing (small batch)
+├── docs/misc/LARGE_BATCH_TESTING.md  # Guide for 1000+ image testing
 ├── docker-compose.yml    # PostgreSQL + services
 ├── .env.example          # Environment variables template
 └── README.md
@@ -106,15 +107,25 @@ rapid-photo-upload/
 ## Test Images
 
 The `100-test-images/` folder contains sample images for testing upload functionality:
-- **100 total images** for testing large batch uploads
+- **100 total images** for testing medium batch uploads
 - **Most images**: Small ImageNet samples (50-300KB)
 - **12 pexels_* files**: High-resolution photos (1-3MB each) for realistic testing
 
 Use these images to test:
 - Single file uploads
 - Batch uploads (10-20 files)
-- Large session support (100 files)
+- Medium session support (100 files)
 - Progress tracking and time estimates
+
+### Testing with 1000+ Images
+
+For large batch testing (1000+ images), see **[LARGE_BATCH_TESTING.md](docs/misc/LARGE_BATCH_TESTING.md)** which provides:
+- Links to free Kaggle datasets (Natural Images, Caltech 101, etc.)
+- Download instructions
+- Testing scenarios and expected performance
+- Troubleshooting guide
+
+**Recommended Dataset**: [Natural Images on Kaggle](https://www.kaggle.com/datasets/prasunroy/natural-images) - 8,000+ real-world photos perfect for testing.
 
 ## Quick Start
 
@@ -340,4 +351,5 @@ This project was built with AI assistance (Cursor IDE + Claude Sonnet 3.5). See 
 ## License
 
 MIT License - See LICENSE file for details.
+
 
