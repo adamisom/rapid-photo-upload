@@ -229,3 +229,49 @@ After passing these smoke tests:
 **Time to complete**: 10-15 minutes  
 **Critical tests**: Tests 1, 3, 4, 5 (verify core optimizations)
 
+---
+
+## 📱 Mobile Testing (Expo)
+
+### Prerequisites
+- Backend running (see Test 1)
+- Expo Go app installed on iOS/Android device
+- Device and computer on same network
+
+### Setup
+```bash
+cd mobile
+npm install  # If needed
+npm start
+```
+
+### Test Mobile Upload (5 min)
+
+1. **Scan QR code** with Expo Go app
+2. **Login/Register** via mobile app
+3. **Select 10-20 photos** from device gallery
+4. **Start upload** and verify:
+   - ✅ Progress updates smoothly
+   - ✅ Multiple uploads happen concurrently (check Network tab in dev tools)
+   - ✅ Batch complete requests visible (not individual completes)
+   - ✅ All photos appear in gallery after completion
+
+### Mobile-Specific Features
+- ✅ **Pre-requested URLs**: All URLs ready before uploads start
+- ✅ **Batched completes**: 10x fewer HTTP requests
+- ✅ **20 concurrent uploads**: Faster than previous 5 concurrent
+- ✅ **Event-driven queue**: Efficient slot management
+
+### Mobile vs Web Parity
+Mobile now has **feature parity** with web:
+- ✅ Pre-requesting presigned URLs (50 at a time)
+- ✅ Batched complete notifications (5 items or 1s)
+- ✅ Event-driven queue (10ms checks vs 100ms polling)
+- ✅ 20 concurrent uploads (same as web)
+
+**Note**: State persistence (localStorage) is web-only. Mobile state resets on app restart (acceptable for MVP).
+
+---
+
+**Total time**: 15-20 minutes (web + mobile)
+

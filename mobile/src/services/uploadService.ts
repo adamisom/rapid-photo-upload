@@ -1,5 +1,5 @@
 import apiClient from './api';
-import type { InitiateUploadResponse } from '../types';
+import type { InitiateUploadResponse, BatchCompleteRequest, BatchCompleteResponse } from '../types';
 
 export const uploadService = {
   initiateUpload: async (
@@ -72,6 +72,12 @@ export const uploadService = {
 
   getBatchStatus: async (batchId: string) => {
     const response = await apiClient.get(`/api/upload/batch/${batchId}`);
+    return response.data;
+  },
+
+  batchComplete: async (items: {photoId: string; fileSizeBytes: number; eTag?: string}[]): Promise<BatchCompleteResponse> => {
+    const request: BatchCompleteRequest = { items };
+    const response = await apiClient.post<BatchCompleteResponse>('/api/upload/complete/batch', request);
     return response.data;
   },
 };

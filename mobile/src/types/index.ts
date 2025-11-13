@@ -56,6 +56,23 @@ export interface PhotoListResponse {
   totalCount: number;
 }
 
+// Batch Complete Types
+export interface BatchCompleteItem {
+  photoId: string;
+  fileSizeBytes: number;
+  eTag?: string;
+}
+
+export interface BatchCompleteRequest {
+  items: BatchCompleteItem[];
+}
+
+export interface BatchCompleteResponse {
+  status: 'success';
+  processed: number;
+  total: number;
+}
+
 // Error Types
 export interface ApiError {
   message: string;
