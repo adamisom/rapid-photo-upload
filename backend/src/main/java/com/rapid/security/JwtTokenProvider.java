@@ -13,13 +13,16 @@ import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
-    @Value("${jwt.secret}")
+    @Value("${jwt.secret:}")
     private String jwtSecret;
     
     @Value("${jwt.expiration}")
     private long jwtExpiration;
     
     private SecretKey getSigningKey() {
+        if (jwtSecret == null || jwtSecret.isEmpty()) {
+            throw new IllegalStateException("JWT_SECRET environment variable is required but not set. Please set it before starting the application.");
+        }
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
     
