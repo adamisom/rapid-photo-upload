@@ -255,7 +255,9 @@ export default function UploadPage() {
                   <div className="text-right">
                     <p className="text-2xl font-bold text-blue-600">{Math.round(totalProgress)}%</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {files.filter((f) => f.status === 'uploading').length} uploading
+                      {files.length >= 50 
+                        ? 'uploading in batches of 20'
+                        : `${files.filter((f) => f.status === 'uploading').length} uploading`}
                     </p>
                     {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && (
                       <p className="text-xs text-gray-600 mt-1 font-medium">

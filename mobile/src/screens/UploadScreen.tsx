@@ -156,6 +156,11 @@ export default function UploadScreen() {
             {files.filter(f => f.status === 'completed').length} of {files.length} files uploaded
           </Text>
           <Text style={styles.progressPercent}>{Math.round(totalProgress)}%</Text>
+          {files.length >= 50 && (
+            <Text style={styles.etaText}>
+              uploading in batches of 20
+            </Text>
+          )}
           <ProgressBar progress={totalProgress} />
           {estimatedTimeRemaining !== null && estimatedTimeRemaining > 0 && (
             <Text style={styles.etaText}>
