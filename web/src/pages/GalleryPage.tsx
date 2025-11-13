@@ -3,20 +3,28 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { photoService } from '../services/photoService';
 import type { PhotoDto, PhotoListResponse } from '../types';
 import Alert from '../components/Alert';
 
 export default function GalleryPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [photos, setPhotos] = useState<PhotoDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tagErrors, setTagErrors] = useState<Record<string, string>>({});
   const [tagInput, setTagInput] = useState<Record<string, string>>({});
   const [showSuggestions, setShowSuggestions] = useState<Record<string, boolean>>({});
-  const [page, setPage] = useState(0);
-  const [totalPhotos, setTotalPhotos] = useState(0);
+  const [pageInput, setPageInput] = useState<string>('');
   const pageSize = 15;
+  const [totalPhotos, setTotalPhotos] = useState(0);
+  const totalPages = Math.ceil(totalPhotos / pageSize);
+  
+  // Get page from URL (1-indexed) or default to 1, convert to 0-indexed for API
+  const urlPage = parseInt(searchParams.get('page') || '1', 10);
+  const page = Math.max(1, Math.min(totalPages || 1, urlPage)); // Clamp to valid range
+  const apiPage = page - 1; // Convert to 0-indexed for API
 
   // Get all unique tags from user's photos for autocomplete
   const getAllUserTags = (): string[] => {
@@ -43,16 +51,39 @@ export default function GalleryPage() {
       .slice(0, 5); // Show max 5 suggestions
   };
 
+  // Update URL when page changes (1-indexed in URL)
+  const updatePage = (newPage: number) => {
+    const validPage = Math.max(1, Math.min(totalPages || 1, newPage));
+    setSearchParams({ page: String(validPage) });
+  };
+
+  // Handle page input submission
+  const handlePageInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const inputPage = parseInt(pageInput, 10);
+    if (!isNaN(inputPage) && inputPage >= 1 && inputPage <= totalPages) {
+      updatePage(inputPage);
+    } else {
+      // Reset to current page if invalid
+      setPageInput(String(page));
+    }
+  };
+
+  // Sync page input with URL page on mount/change
+  useEffect(() => {
+    setPageInput(String(page));
+  }, [page]);
+
   useEffect(() => {
     void loadPhotos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [apiPage]);
 
   const loadPhotos = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response: PhotoListResponse = await photoService.getPhotos(page, pageSize);
+      const response: PhotoListResponse = await photoService.getPhotos(apiPage, pageSize);
       setPhotos(response.photos);
       setTotalPhotos(response.totalCount);
     } catch (err) {
@@ -168,8 +199,6 @@ export default function GalleryPage() {
     }
     return `${mb.toFixed(2)} MB`;
   };
-
-  const totalPages = Math.ceil(totalPhotos / pageSize);
 
   return (
     <div className="min-h-screen">
@@ -350,8 +379,8 @@ export default function GalleryPage() {
             {totalPages > 1 && (
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 p-4 bg-white rounded-lg border border-gray-200">
                 <button
-                  onClick={() => setPage(Math.max(0, page - 1))}
-                  disabled={page === 0}
+                  onClick={() => updatePage(page - 1)}
+                  disabled={page === 1}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 font-medium flex items-center space-x-1"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,13 +389,31 @@ export default function GalleryPage() {
                   <span>Previous</span>
                 </button>
 
-                <div className="text-sm text-gray-700 font-medium">
-                  Page <span className="font-bold">{page + 1}</span> of <span className="font-bold">{totalPages}</span> • <span className="text-gray-500">{totalPhotos} photos total</span>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-gray-700 font-medium">
+                    Page <span className="font-bold">{page}</span> of <span className="font-bold">{totalPages}</span> • <span className="text-gray-500">{totalPhotos} photos total</span>
+                  </div>
+                  
+                  {/* Page Number Input */}
+                  <form onSubmit={handlePageInputSubmit} className="flex items-center gap-2">
+                    <label htmlFor="page-input" className="text-xs text-gray-600">Go to:</label>
+                    <input
+                      id="page-input"
+                      type="number"
+                      min="1"
+                      max={totalPages}
+                      value={pageInput}
+                      onChange={(e) => setPageInput(e.target.value)}
+                      onBlur={handlePageInputSubmit}
+                      className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder={`1-${totalPages}`}
+                    />
+                  </form>
                 </div>
 
                 <button
-                  onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                  disabled={page >= totalPages - 1}
+                  onClick={() => updatePage(page + 1)}
+                  disabled={page >= totalPages}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 font-medium flex items-center space-x-1"
                 >
                   <span>Next</span>
