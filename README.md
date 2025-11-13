@@ -23,7 +23,7 @@ A production-ready, AI-assisted monorepo featuring concurrent multi-file uploads
 - Mobile: React Native + Expo
 - Cloud: Railway (hosting) + AWS S3 (storage)
 
-**Deployment Guide:** See [docs/misc/RAILWAY_DEPLOYMENT.md](docs/misc/RAILWAY_DEPLOYMENT.md) for full deployment instructions.
+**Deployment Guide:** See [DEPLOY.md](DEPLOY.md) for deployment commands and setup.
 
 ---
 
