@@ -53,11 +53,14 @@ export const authService = {
 
   /**
    * Clear auth token from localStorage
+   * Also clears upload state since it's user-specific
    */
   clearAuthToken: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('email');
+    // Clear upload state on logout (user-specific data)
+    localStorage.removeItem('rapidphoto_upload_state');
   },
 
   /**
