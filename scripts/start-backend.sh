@@ -53,7 +53,7 @@ echo -e "${GREEN}✅ Docker is running${NC}"
 if ! docker ps | grep -q rapidphoto-postgres; then
     echo -e "${YELLOW}⚠️  PostgreSQL container is not running${NC}"
     echo "   Starting PostgreSQL with docker-compose..."
-    cd "$(dirname "$0")"
+    cd "$(dirname "$0")/.."
     docker-compose up -d postgres
     echo "   Waiting for PostgreSQL to be ready..."
     sleep 3
@@ -69,5 +69,5 @@ fi
 
 # Start backend
 echo -e "${GREEN}✅ All prerequisites met, starting backend...${NC}"
-cd "$(dirname "$0")/backend"
+cd "$(dirname "$0")/../backend"
 ./mvnw spring-boot:run
