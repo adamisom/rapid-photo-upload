@@ -24,6 +24,7 @@ export interface UploadBatch {
   id: string;
   files: UploadFile[];
   completedAt: Date;
+  totalUploadTimeSeconds?: number; // Time taken to upload entire batch (rounded to nearest 0.01s)
 }
 
 interface UploadState {
@@ -69,6 +70,7 @@ interface SerializableUploadState {
     id: string;
     files: SerializableUploadFile[];
     completedAt: string;
+    totalUploadTimeSeconds?: number;
   }>;
   currentBatchId: string | null;
   isUploading: boolean;
@@ -100,7 +102,8 @@ const saveStateToStorage = (state: UploadState, currentBatchId: string | null, i
           progress: f.progress,
           error: f.error
         })),
-        completedAt: b.completedAt.toISOString()
+        completedAt: b.completedAt.toISOString(),
+        totalUploadTimeSeconds: b.totalUploadTimeSeconds
       })),
       currentBatchId,
       isUploading,
@@ -162,7 +165,8 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
             error: sf.error
           };
         }),
-        completedAt: new Date(b.completedAt)
+        completedAt: new Date(b.completedAt),
+        totalUploadTimeSeconds: b.totalUploadTimeSeconds
       }));
       
       return { activeFiles, completedBatches };
@@ -498,6 +502,14 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
         batchCompleteTimer = null;
       }
       await flushCompletedQueue();
+      
+      // Calculate total upload time
+      const totalUploadTimeMs = uploadStartTime ? Date.now() - uploadStartTime : 0;
+      const totalUploadTimeSeconds = Math.round((totalUploadTimeMs / 1000) * 100) / 100; // Round to nearest 0.01s
+      
+      if (totalUploadTimeSeconds > 0) {
+        console.log(`✅ Batch upload completed in ${totalUploadTimeSeconds.toFixed(2)} seconds (${pendingFiles.length} files)`);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload batch failed';
       setError(errorMessage);
@@ -532,6 +544,10 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
         
         const completedCount = currentBatchFiles.filter((f) => f.status === 'completed').length;
         
+        // Calculate total upload time
+        const totalUploadTimeMs = uploadStartTime ? Date.now() - uploadStartTime : 0;
+        const totalUploadTimeSeconds = Math.round((totalUploadTimeMs / 1000) * 100) / 100; // Round to nearest 0.01s
+        
         // Calculate ETA based on elapsed time and progress
         if (uploadStartTime && completedCount > 0) {
           const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
@@ -545,7 +561,8 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
         const newBatch = allFilesSucceeded && completedFilesFromBatch.length > 0 ? {
           id: newBatchId,
           files: completedFilesFromBatch,
-          completedAt: new Date()
+          completedAt: new Date(),
+          totalUploadTimeSeconds: totalUploadTimeSeconds > 0 ? totalUploadTimeSeconds : undefined
         } : null;
         
         // Build new completedBatches array with idempotency check (for React StrictMode)

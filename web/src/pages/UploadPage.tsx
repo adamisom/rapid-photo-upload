@@ -459,6 +459,9 @@ export default function UploadPage() {
                   {lastBatch.files.length} file{lastBatch.files.length !== 1 ? 's' : ''} • 
                   {' '}{lastBatch.files.filter((f) => f.status === 'completed').length} completed, 
                   {' '}{lastBatch.files.filter((f) => f.status === 'failed').length} failed
+                  {lastBatch.totalUploadTimeSeconds !== undefined && (
+                    <> • Uploaded in {lastBatch.totalUploadTimeSeconds.toFixed(2)}s</>
+                  )}
                 </p>
               </div>
               <button
@@ -504,6 +507,9 @@ export default function UploadPage() {
                     Batch {previousBatches.length - index} • 
                     {' '}{batch.files.filter((f) => f.status === 'completed').length} completed, 
                     {' '}{batch.files.filter((f) => f.status === 'failed').length} failed
+                    {batch.totalUploadTimeSeconds !== undefined && (
+                      <> • {batch.totalUploadTimeSeconds.toFixed(2)}s</>
+                    )}
                   </p>
                   {renderBatchFiles(batch)}
                 </div>
