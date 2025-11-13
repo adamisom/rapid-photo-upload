@@ -20,7 +20,8 @@ export default function UploadPage() {
   const { 
     files = [], 
     completedBatches = [],
-    isUploading = false, 
+    isUploading = false,
+    isPreparing = false,
     totalProgress = 0,
     estimatedTimeRemaining = null,
     error = null, 
