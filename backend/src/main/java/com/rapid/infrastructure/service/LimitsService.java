@@ -11,16 +11,16 @@ import org.springframework.transaction.annotation.Transactional;
  * 
  * Limits:
  * - Max 50 users
- * - Max 1,500 photos
- * - Max 50 GB total storage (overall app total)
+ * - Max 10,000 photos
+ * - Max 500 GB total storage (overall app total)
  * - Max 1.1 GB per file
  */
 @Service
 public class LimitsService {
     
     private static final int MAX_USERS = 50;
-    private static final int MAX_PHOTOS = 1500;
-    private static final long MAX_TOTAL_BYTES = 50L * 1024 * 1024 * 1024; // 50 GB (overall app total)
+    private static final int MAX_PHOTOS = 10000;
+    private static final long MAX_TOTAL_BYTES = 500L * 1024 * 1024 * 1024; // 500 GB (overall app total)
     private static final long MAX_FILE_BYTES = 1100L * 1024 * 1024;  // 1.1 GB (1100 MB)
     
     private final UserRepository userRepository;
