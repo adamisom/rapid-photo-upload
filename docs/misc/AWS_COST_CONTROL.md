@@ -8,8 +8,8 @@ Prevent runaway AWS bills with hard limits enforced server-side:
 |------------|-------|---------------|
 | **Max Users** | 50 total users | "Can't register more users at this time" |
 | **Max Photos** | 1,500 total photos | "You've reached your image limit" |
-| **Max Storage** | 500 MB total | "You've reached your image limit" |
-| **Max File Size** | 100 MB per file | "Image too large (max 100 MB)" |
+| **Max Storage** | 50 GB total (overall app) | "You've reached your image limit" |
+| **Max File Size** | 1.1 GB per file | "Image too large (max 1.1 GB)" |
 
 All limits are checked **before** any AWS costs are incurred (presigned URLs aren't even generated if limits are hit).
 
@@ -28,8 +28,8 @@ Centralized service for all limit checks:
 public class LimitsService {
     private static final int MAX_USERS = 50;
     private static final int MAX_PHOTOS = 1500;
-    private static final long MAX_TOTAL_BYTES = 500L * 1024 * 1024; // 500 MB
-    private static final long MAX_FILE_BYTES = 100L * 1024 * 1024;  // 100 MB
+    private static final long MAX_TOTAL_BYTES = 50L * 1024 * 1024 * 1024; // 50 GB (overall app total)
+    private static final long MAX_FILE_BYTES = (long)(1.1 * 1024 * 1024 * 1024);  // 1.1 GB
     
     public void checkUserLimit() throws LimitExceededException;
     public void checkPhotoLimit() throws LimitExceededException;
@@ -97,7 +97,7 @@ Long sumFileSizeBytes();
 
 ## Testing Guide
 
-### 1. Test File Size Limit (100 MB)
+### 1. Test File Size Limit (1.1 GB)
 
 **Create a 101 MB test file:**
 ```bash
@@ -106,7 +106,7 @@ dd if=/dev/zero of=test-101mb.bin bs=1m count=101
 ```
 
 **Try to upload it via web UI:**
-- Should immediately fail with: **"Image too large (max 100 MB)"**
+- Should immediately fail with: **"Image too large (max 1.1 GB)"**
 - HTTP 429 response
 
 ### 2. Test User Limit (50 users)
@@ -150,7 +150,7 @@ curl -X POST http://localhost:8080/api/upload/initiate \
 - First 1,500: Success
 - Upload 1,501: **"You've reached your image limit"** (429)
 
-### 4. Test Storage Limit (500 MB)
+### 4. Test Storage Limit (50 GB)
 
 **Calculate current storage:**
 ```sql
@@ -165,26 +165,26 @@ SELECT
 FROM photos;
 ```
 
-**Upload until 500 MB reached:**
+**Upload until 50 GB reached:**
 ```bash
 # Use the 12 large pexels_* files (1-3MB each)
-# Upload repeatedly until ~500 MB reached
+# Upload repeatedly until ~50 GB reached
 ```
 
 **Expected:**
-- Uploads succeed until total reaches 500 MB
+- Uploads succeed until total reaches 50 GB
 - Next upload: **"You've reached your image limit"** (429)
 
 ### 5. Manual Testing via Web UI
 
-**Test 100 MB file limit:**
-1. Download a large image (> 100 MB) or create one:
+**Test 1.1 GB file limit:**
+1. Download a large image (> 1.1 GB) or create one:
    ```bash
    # Create 101 MB test image
    convert -size 10000x10000 xc:white test-large.jpg
    ```
 2. Try to upload via web UI
-3. Should see error: **"Image too large (max 100 MB)"**
+3. Should see error: **"Image too large (max 1.1 GB)"**
 
 **Test photo/storage limits:**
 1. Use `100-test-images/` folder
@@ -208,7 +208,7 @@ try {
     
     // Display user-friendly error
     if (limitType === 'FILE_SIZE') {
-      alert('Image too large (max 100 MB)');
+      alert('Image too large (max 1.1 GB)');
     } else if (limitType === 'USER_LIMIT') {
       alert("Can't register more users at this time");
     } else {
