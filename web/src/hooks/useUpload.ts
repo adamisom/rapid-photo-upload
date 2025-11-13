@@ -37,6 +37,7 @@ interface UploadManager {
   currentBatchId: string | null;
   completedBatches: UploadBatch[];
   isUploading: boolean;
+  isPreparing: boolean; // True while requesting presigned URLs (before first upload starts)
   totalProgress: number;
   estimatedTimeRemaining: number | null; // seconds
   error: string | null;
@@ -185,6 +186,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
     const stored = loadStateFromStorage();
     return stored?.isUploading || false;
   });
+  const [isPreparing, setIsPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalProgress, setTotalProgress] = useState(() => {
     const stored = loadStateFromStorage();
@@ -319,12 +321,18 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
     }
 
     setIsUploading(true);
+    setIsPreparing(true); // Show "Preparing..." while requesting URLs
     setError(null);
-    setUploadStartTime(Date.now()); // Track start time for ETA calculation
+    // Reset uploadStartTime to clear any stale value from localStorage
+    setUploadStartTime(null);
+    // Will be set when first S3 upload actually starts
 
     // Generate new batchId when "Start Upload" is clicked
     const newBatchId = uuidv4();
     setCurrentBatchId(newBatchId);
+
+    // Track actual upload start time (declared outside try so it's accessible in finally)
+    let actualUploadStartTime: number | null = null;
 
     try {
       // ========================================================================
@@ -386,6 +394,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
       if (filesWithUrls.length === 0) {
         setError('Failed to get presigned URLs for any files');
         setIsUploading(false);
+        setIsPreparing(false);
         return;
       }
 
@@ -458,6 +467,13 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
         // Upload in background without await
         (async () => {
           try {
+            // Start timer when first upload actually begins (not when requesting URLs)
+            if (actualUploadStartTime === null) {
+              actualUploadStartTime = Date.now();
+              setUploadStartTime(actualUploadStartTime);
+              setIsPreparing(false); // First upload started, hide "Preparing..."
+            }
+            
             updateFileStatus(file.id, 'uploading');
 
             // Upload to S3 (URL already obtained in Phase 1)
@@ -503,8 +519,8 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
       }
       await flushCompletedQueue();
       
-      // Calculate total upload time
-      const totalUploadTimeMs = uploadStartTime ? Date.now() - uploadStartTime : 0;
+      // Calculate total upload time using actual start time
+      const totalUploadTimeMs = actualUploadStartTime ? Date.now() - actualUploadStartTime : 0;
       const totalUploadTimeSeconds = Math.round((totalUploadTimeMs / 1000) * 100) / 100; // Round to nearest 0.01s
       
       if (totalUploadTimeSeconds > 0) {
@@ -513,8 +529,10 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload batch failed';
       setError(errorMessage);
+      setIsPreparing(false);
     } finally {
       setIsUploading(false);
+      setIsPreparing(false); // Ensure preparing is cleared even if no uploads started
 
       // ATOMIC STATE UPDATE: Move batch to history ONLY if ALL files succeeded
       // Keep any failed files in active area so they can be retried
@@ -544,13 +562,14 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
         
         const completedCount = currentBatchFiles.filter((f) => f.status === 'completed').length;
         
-        // Calculate total upload time
-        const totalUploadTimeMs = uploadStartTime ? Date.now() - uploadStartTime : 0;
+        // Calculate total upload time using actual start time (captured from closure)
+        // Note: actualUploadStartTime is captured from the closure above
+        const totalUploadTimeMs = actualUploadStartTime ? Date.now() - actualUploadStartTime : 0;
         const totalUploadTimeSeconds = Math.round((totalUploadTimeMs / 1000) * 100) / 100; // Round to nearest 0.01s
         
         // Calculate ETA based on elapsed time and progress
-        if (uploadStartTime && completedCount > 0) {
-          const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
+        if (actualUploadStartTime && completedCount > 0) {
+          const elapsedSeconds = (Date.now() - actualUploadStartTime) / 1000;
           const averageTimePerFile = elapsedSeconds / completedCount;
           const remainingFiles = pendingFiles.length - completedCount;
           const estimatedSeconds = Math.ceil(averageTimePerFile * remainingFiles);
@@ -592,6 +611,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
 
   const cancelUpload = useCallback(() => {
     setIsUploading(false);
+    setIsPreparing(false);
     setError('Upload cancelled');
   }, []);
 
@@ -602,6 +622,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
     });
     setCurrentBatchId(null);
     setIsUploading(false);
+    setIsPreparing(false);
     setError(null);
     setTotalProgress(0);
     setEstimatedTimeRemaining(null);
@@ -619,6 +640,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
     currentBatchId,
     completedBatches: uploadState.completedBatches,
     isUploading,
+    isPreparing,
     totalProgress,
     estimatedTimeRemaining,
     error,
