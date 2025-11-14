@@ -475,7 +475,6 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
       // PHASE 2: Upload files to S3 with concurrency control (pipelined)
       // ========================================================================
       // Upload files as they become available in the ready queue
-      const uploadQueue = readyToUploadQueue.slice(); // Start with first batch
       const activeUploads = new Set<string>();
       
       // Queue for batched complete notifications
