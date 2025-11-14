@@ -478,8 +478,7 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
       const activeUploads = new Set<string>();
       
       // Queue for batched complete notifications
-      // Track fileId so we can mark files as completed after backend confirms
-      const completedQueue: Array<{ photoId: string; fileSize: number; fileId: string }> = [];
+      const completedQueue: Array<{ photoId: string; fileSize: number }> = [];
       const BATCH_COMPLETE_SIZE = 5; // Send batch every 5 completions
       const BATCH_COMPLETE_INTERVAL = 1000; // Or every 1 second
       let batchCompleteTimer: ReturnType<typeof setInterval> | null = null;
@@ -499,11 +498,8 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
               fileSizeBytes: item.fileSize
             }))
           );
-          
-          // Mark files as completed ONLY after backend confirms (batch complete API succeeded)
-          batch.forEach(item => {
-            updateFileStatus(item.fileId, 'completed');
-          });
+          // Note: Files are already marked as completed optimistically after S3 upload
+          // This just notifies the backend to update their status from PENDING to UPLOADED
         } catch (err) {
           console.error('Batch complete failed, will retry:', err);
           // Put items back in queue for retry
@@ -592,16 +588,14 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
               (progress) => updateFileProgress(file.id, progress)
             );
 
-            // Queue for batched complete notification
-            // Don't mark as completed yet - wait for backend confirmation
+            // Mark as completed optimistically (S3 upload succeeded)
+            updateFileStatus(file.id, 'completed');
+            
+            // Queue for batched complete notification (to update backend status from PENDING to UPLOADED)
             completedQueue.push({
               photoId: urlData.photoId,
-              fileSize: file.file.size,
-              fileId: file.id // Track which file this is for
+              fileSize: file.file.size
             });
-            
-            // Mark as "uploading" still (S3 done, but waiting for backend confirmation)
-            // Status will be updated to "completed" after batch complete API succeeds
             
             // Flush if batch size reached
             if (completedQueue.length >= BATCH_COMPLETE_SIZE) {
@@ -623,12 +617,29 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
       
-      // Final flush of any remaining completions
+      // Final flush of any remaining completions - retry until queue is empty
+      // This ensures backend status is updated so gallery shows the photos
       if (batchCompleteTimer) {
         clearInterval(batchCompleteTimer);
         batchCompleteTimer = null;
       }
-      await flushCompletedQueue();
+      
+      // Retry final flush with exponential backoff (max 5 retries)
+      let retryCount = 0;
+      const MAX_RETRIES = 5;
+      while (completedQueue.length > 0 && retryCount < MAX_RETRIES) {
+        await flushCompletedQueue();
+        if (completedQueue.length > 0) {
+          retryCount++;
+          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000); // 1s, 2s, 4s, 5s, 5s
+          console.log(`⏳ Retrying batch complete flush (attempt ${retryCount}/${MAX_RETRIES}, ${completedQueue.length} items remaining, waiting ${delay}ms)`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+      
+      if (completedQueue.length > 0) {
+        console.warn(`⚠️ Some batch complete notifications failed after ${MAX_RETRIES} retries. ${completedQueue.length} items may not appear in gallery until page refresh.`);
+      }
       
       // Calculate total upload time using actual start time
       const totalUploadTimeMs = actualUploadStartTime ? Date.now() - actualUploadStartTime : 0;
