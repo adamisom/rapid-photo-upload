@@ -42,7 +42,7 @@ export default function UploadScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsMultipleSelection: true,
         quality: 0.8,
       });
@@ -238,6 +238,7 @@ export default function UploadScreen() {
                 {!isUploading && item.status !== 'uploading' && (
                   <TouchableOpacity
                     onPress={() => handleRemoveFile(item.id)}
+                    style={styles.removeButtonContainer}
                   >
                     <Text style={styles.removeButton}>×</Text>
                   </TouchableOpacity>
@@ -587,11 +588,20 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
-  removeButton: {
-    color: '#cc0000',
-    fontSize: 24,
-    fontWeight: 'bold',
+  removeButtonContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: 10,
+  },
+  removeButton: {
+    color: '#666',
+    fontSize: 20,
+    fontWeight: 'bold',
+    lineHeight: 20,
   },
   statusCompleted: {
     fontSize: 12,
