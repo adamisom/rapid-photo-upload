@@ -113,7 +113,7 @@ For large batch uploads (1000+ files), we've implemented:
 Spring Boot uses **non-blocking I/O** by default:
 
 - **Tomcat NIO Connector**: Handles many concurrent connections with few threads
-- **Connection Pool**: HikariCP (30 max connections) for database
+- **Connection Pool**: HikariCP (100 max connections, increased from 30 for high-volume uploads) for database
 - **S3 SDK**: Asynchronous AWS SDK for S3 operations
 
 **Result**: Backend can handle 100+ simultaneous requests without blocking.

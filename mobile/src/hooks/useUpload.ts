@@ -182,11 +182,15 @@ export const useUpload = (maxConcurrent: number = 20) => {
 
     try {
       // ========================================================================
-      // PHASE 1: Pre-request all presigned URLs in parallel batches
+      // PIPELINED APPROACH: Fetch URLs in batches, start uploading immediately
       // ========================================================================
-      // This eliminates the sequential bottleneck - all URLs ready before uploads start
-      const URL_BATCH_SIZE = 50; // Request 50 URLs at a time to avoid overwhelming backend
+      // Fetch URLs in batches (e.g., 100), start uploading as soon as each batch is ready
+      // This allows uploads to start while still fetching remaining URLs
+      const URL_BATCH_SIZE = 100; // Request 100 URLs at a time
       const presignedUrlMap = new Map<string, { photoId: string; uploadUrl: string; batchId: string }>();
+      const readyToUploadQueue: MobileUploadFile[] = [];
+      let urlFetchingComplete = false;
+      let urlFetchError: Error | null = null;
       
       // Split files into batches for URL requests
       const urlBatches: MobileUploadFile[][] = [];
@@ -194,8 +198,8 @@ export const useUpload = (maxConcurrent: number = 20) => {
         urlBatches.push(pendingFiles.slice(i, i + URL_BATCH_SIZE));
       }
       
-      // Request URLs in batches (parallel within batch, sequential between batches)
-      for (const batch of urlBatches) {
+      // URL fetching function (runs in parallel with uploads)
+      const fetchUrlsForBatch = async (batch: MobileUploadFile[], batchIndex: number) => {
         try {
           const urlResponses = await Promise.all(
             batch.map(file =>
@@ -208,37 +212,96 @@ export const useUpload = (maxConcurrent: number = 20) => {
             )
           );
           
-          // Store URLs in map for quick lookup
+          // Store URLs and add to ready queue
           urlResponses.forEach(({ fileId, response }) => {
             presignedUrlMap.set(fileId, {
               photoId: response.photoId,
               uploadUrl: response.uploadUrl,
               batchId: response.batchId
             });
+            
+            // Add to ready queue
+            const file = pendingFiles.find(f => f.id === fileId);
+            if (file) {
+              readyToUploadQueue.push(file);
+            }
           });
         } catch (err) {
-          // If URL request fails for a batch, mark those files as failed
-          console.error('Failed to get presigned URLs for batch:', err);
+          console.error(`Failed to get presigned URLs for batch ${batchIndex}:`, err);
+          const errorMessage = err instanceof Error ? err.message : 'Failed to get upload URL';
           batch.forEach(file => {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to get upload URL';
             updateFileStatus(file.id, 'failed', errorMessage);
           });
+          if (!urlFetchError) {
+            urlFetchError = err instanceof Error ? err : new Error(String(err));
+          }
         }
+      };
+      
+      // Start fetching URLs with limited concurrency (1 batch at a time)
+      // Limited to 1 batch to stay under database connection limit (100 max_connections)
+      // Each URL request needs a DB connection, so 100 URLs = 100 connections max
+      const MAX_CONCURRENT_URL_BATCHES = 1; // Fetch 1 batch (100 URLs) at a time
+      const urlFetchPromises: Promise<void>[] = [];
+      let nextBatchIndex = 0;
+      let activeBatchCount = 0;
+      
+      // Function to start fetching next batch with concurrency limit
+      const startNextBatch = () => {
+        if (nextBatchIndex >= urlBatches.length || activeBatchCount >= MAX_CONCURRENT_URL_BATCHES) {
+          return;
+        }
+        
+        const batchIndex = nextBatchIndex++;
+        activeBatchCount++;
+        
+        const promise = fetchUrlsForBatch(urlBatches[batchIndex], batchIndex);
+        urlFetchPromises.push(promise);
+        
+        // When this batch completes, start the next one
+        promise.finally(() => {
+          activeBatchCount--;
+          startNextBatch(); // Try to start next batch
+        });
+      };
+      
+      // Start initial batches (up to concurrency limit)
+      for (let i = 0; i < Math.min(MAX_CONCURRENT_URL_BATCHES, urlBatches.length); i++) {
+        startNextBatch();
       }
       
-      // Filter out files that failed to get URLs
-      const filesWithUrls = pendingFiles.filter(f => presignedUrlMap.has(f.id));
+      // Mark URL fetching as complete when all batches are done
+      Promise.all(urlFetchPromises).then(() => {
+        urlFetchingComplete = true;
+        setIsPreparing(false); // Hide "Preparing..." once all URLs are fetched
+      }).catch(() => {
+        urlFetchingComplete = true;
+        setIsPreparing(false);
+      });
       
-      if (filesWithUrls.length === 0) {
+      // Wait for first batch to be ready before starting uploads (so we have something to upload)
+      if (urlBatches.length > 0 && urlFetchPromises.length > 0) {
+        await urlFetchPromises[0]; // Wait for first batch specifically
+        setIsPreparing(false); // Hide "Preparing..." once first batch is ready
+      }
+      
+      // Check if we have any files ready to upload
+      if (readyToUploadQueue.length === 0 && urlFetchingComplete) {
+        if (urlFetchError) {
+          setError('Failed to get presigned URLs for any files');
+        } else {
+          setError('No files ready to upload');
+        }
         setIsUploading(false);
         setIsPreparing(false);
         return;
       }
 
       // ========================================================================
-      // PHASE 2: Upload files to S3 with concurrency control
+      // PHASE 2: Upload files to S3 with concurrency control (pipelined)
       // ========================================================================
-      const uploadQueue = [...filesWithUrls];
+      // Upload files as they become available in the ready queue
+      const uploadQueue = readyToUploadQueue.slice(); // Start with first batch
       const activeUploads = new Set<string>();
       
       // Queue for batched complete notifications
@@ -289,13 +352,47 @@ export const useUpload = (maxConcurrent: number = 20) => {
           checkSlot();
         });
       };
+      
+      // Helper to wait for a file to be ready in the queue
+      const waitForFileInQueue = (): Promise<MobileUploadFile | null> => {
+        return new Promise((resolve) => {
+          const checkQueue = () => {
+            if (readyToUploadQueue.length > 0) {
+              const file = readyToUploadQueue.shift()!;
+              resolve(file);
+            } else if (urlFetchingComplete) {
+              // No more files coming, we're done
+              resolve(null);
+            } else {
+              // Still fetching URLs, wait a bit and check again
+              setTimeout(checkQueue, 50);
+            }
+          };
+          checkQueue();
+        });
+      };
 
-      for (const file of uploadQueue) {
+      // Process files as they become available (pipelined)
+      while (true) {
+        // Wait for a file to be ready or for fetching to complete
+        const file = await waitForFileInQueue();
+        if (!file) {
+          // No more files, but wait for active uploads to finish
+          break;
+        }
+        
         // Wait for a slot (event-driven, not polling)
         await waitForSlot();
 
         activeUploads.add(file.id);
-        const urlData = presignedUrlMap.get(file.id)!;
+        const urlData = presignedUrlMap.get(file.id);
+        
+        if (!urlData) {
+          // URL not found (shouldn't happen, but handle gracefully)
+          updateFileStatus(file.id, 'failed', 'Presigned URL not found');
+          activeUploads.delete(file.id);
+          continue;
+        }
 
         // Upload in background without await
         (async () => {

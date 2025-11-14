@@ -655,7 +655,7 @@ UploadContext (files, addFiles, removeFile, startUpload, cancelUpload)
 ### Scaling Strategy
 
 **Current Bottlenecks** (single backend instance):
-- Database connections (limit ~30)
+- Database connections (limit ~100, increased from 30 for high-volume uploads)
 - Memory usage (Spring Boot footprint ~300MB)
 - CPU (JWT token generation, database queries)
 
