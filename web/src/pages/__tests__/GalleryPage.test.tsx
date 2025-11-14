@@ -29,8 +29,6 @@ vi.mock('react-router-dom', async () => {
 import { photoService } from '../../services/photoService';
 
 const mockGetPhotos = vi.mocked(photoService.getPhotos);
-const mockDeletePhoto = vi.mocked(photoService.deletePhoto);
-const mockUpdatePhotoTags = vi.mocked(photoService.updatePhotoTags);
 
 describe('GalleryPage Pagination', () => {
   const mockPhotos = Array.from({ length: 45 }, (_, i) => ({

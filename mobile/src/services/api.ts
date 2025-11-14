@@ -38,7 +38,7 @@ apiClient.interceptors.response.use(
       // Clear stored token on unauthorized
       try {
         await SecureStore.deleteItemAsync('authToken');
-      } catch (err) {
+      } catch {
         // Silently fail - don't log errors that might trigger notification
         console.log('Failed to clear auth token');
       }
