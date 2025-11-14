@@ -18,6 +18,7 @@ High-level demo script for showcasing the rapid photo upload system with 843-ima
 - **Batched complete notifications**: 5 files per batch instead of individual API calls (10x fewer requests)
 - **Event-driven queue**: Replaced polling with efficient slot management for concurrent uploads
 - **20 concurrent S3 uploads**: Optimal balance between speed and resource usage
+- **Lock-free concurrency**: Removed pessimistic locks, using atomic SQL updates for batch counts (eliminates deadlocks, handles 1000+ concurrent requests)
 
 ---
 

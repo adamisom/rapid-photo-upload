@@ -14,7 +14,7 @@ Before diving into this comprehensive architecture guide, we strongly recommend 
 - **CQRS Pattern**: Command vs Query services separation explained
 - **Vertical Slice Architecture**: Feature-based organization (auth/, upload/, photos/)
 - **Bounded Contexts**: Independent feature domains
-- **Concurrency Handling**: Atomic operations with `ON CONFLICT DO NOTHING`
+- **Concurrency Handling**: Atomic operations with `ON CONFLICT DO NOTHING`, lock-free batch access, atomic SQL count updates
 - **Metadata Storage Strategy**: Why records persist indefinitely
 - **Frontend Architecture**: Context, Hooks, Services pattern
 - **5-Minute Quick Reference**: How to identify patterns in code

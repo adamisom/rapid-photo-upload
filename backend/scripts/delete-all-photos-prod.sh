@@ -1,28 +1,24 @@
 #!/bin/bash
 
-# ============================================================================
-# Delete All Users from Production Database (Railway)
-# ============================================================================
-# 
-# This script deletes ALL users from the production database on Railway.
-# Due to CASCADE relationships, this will also delete:
-# - All photos
-# - All upload_batches
-#
-# ⚠️ USE WITH EXTREME CAUTION - THIS IS PRODUCTION! ⚠️
+# Script to delete all photos from production database
+# This will delete all photos, upload batches, but keep users
+
+set -e
 
 echo "============================================"
-echo "DELETING ALL USERS FROM PRODUCTION DATABASE"
+echo "DELETING ALL PHOTOS FROM PRODUCTION DATABASE"
 echo "============================================"
 echo ""
-echo "⚠️  WARNING: This will delete ALL users and their data from PRODUCTION!"
+echo "⚠️  WARNING: This will delete ALL photos and upload batches from PRODUCTION!"
+echo "⚠️  Users will be preserved."
 echo "⚠️  This action cannot be undone."
 echo ""
-read -p "Are you sure you want to continue? (yes/no): " confirm
 
-if [ "$confirm" != "yes" ]; then
-    echo "Aborted."
-    exit 0
+# Confirmation prompt
+read -p "Type 'yes' to confirm: " confirmation
+if [ "$confirmation" != "yes" ]; then
+    echo "❌ Deletion cancelled."
+    exit 1
 fi
 
 echo ""
@@ -70,7 +66,6 @@ if [ -z "$DATABASE_URL" ]; then
     exit 1
 fi
 
-echo ""
 echo "Connecting to production database..."
 echo ""
 
@@ -98,24 +93,24 @@ echo ""
 # Export password for psql
 export PGPASSWORD="$DB_PASS"
 
-# Execute SQL to delete all users in a transaction
+# Execute SQL to delete all photos and batches
 psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<EOF
 -- Show current counts
-SELECT COUNT(*) as "Users before deletion" FROM users;
 SELECT COUNT(*) as "Photos before deletion" FROM photos;
 SELECT COUNT(*) as "Upload batches before deletion" FROM upload_batches;
+SELECT COUNT(*) as "Users (will be preserved)" FROM users;
 
 -- Use TRUNCATE with CASCADE for faster, atomic deletion
--- This will delete all rows and cascade to dependent tables
-TRUNCATE TABLE photos, upload_batches, users CASCADE;
+-- This will delete all photos and batches, but preserve users
+TRUNCATE TABLE photos, upload_batches CASCADE;
 
 -- Show updated counts
-SELECT COUNT(*) as "Users after deletion" FROM users;
 SELECT COUNT(*) as "Photos after deletion" FROM photos;
 SELECT COUNT(*) as "Upload batches after deletion" FROM upload_batches;
+SELECT COUNT(*) as "Users (preserved)" FROM users;
 
 -- Show success message
-SELECT 'All users deleted successfully!' as "Status";
+SELECT 'All photos and batches deleted successfully!' as "Status";
 EOF
 
 # Clear password from environment
@@ -123,6 +118,7 @@ unset PGPASSWORD
 
 echo ""
 echo "============================================"
-echo "✅ All users have been deleted from production"
+echo "✅ All photos and upload batches have been deleted from production"
+echo "✅ Users have been preserved"
 echo "============================================"
 

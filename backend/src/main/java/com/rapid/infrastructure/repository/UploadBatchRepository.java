@@ -1,9 +1,7 @@
 package com.rapid.infrastructure.repository;
 
 import com.rapid.domain.UploadBatch;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,13 +13,28 @@ import java.util.Optional;
 @Repository
 public interface UploadBatchRepository extends JpaRepository<UploadBatch, String> {
     
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    // No lock needed - we only read the batch, and count increments are atomic via SQL
     Optional<UploadBatch> findByIdAndUserId(String id, String userId);
     
     @Transactional
     @Modifying(clearAutomatically = true)
     @Query("UPDATE UploadBatch b SET b.totalCount = b.totalCount + 1 WHERE b.id = :batchId")
     void incrementTotalCount(@Param("batchId") String batchId);
+    
+    @Transactional
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE UploadBatch b SET b.completedCount = b.completedCount + 1 WHERE b.id = :batchId")
+    void incrementCompletedCount(@Param("batchId") String batchId);
+    
+    @Transactional
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE UploadBatch b SET b.completedCount = b.completedCount + :increment WHERE b.id = :batchId")
+    void incrementCompletedCountBy(@Param("batchId") String batchId, @Param("increment") int increment);
+    
+    @Transactional
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE UploadBatch b SET b.failedCount = b.failedCount + 1 WHERE b.id = :batchId")
+    void incrementFailedCount(@Param("batchId") String batchId);
     
     /**
      * Atomically insert batch if not exists using PostgreSQL's ON CONFLICT.

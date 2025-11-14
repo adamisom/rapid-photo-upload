@@ -141,13 +141,11 @@ public class UploadCommandService {
         photo.setStatus(PhotoStatus.UPLOADED);
         photoRepository.save(photo);
         
-        // Update batch counts
+        // Update batch counts atomically
         UploadBatch batch = photo.getBatch();
-        batch.setCompletedCount(batch.getCompletedCount() + 1);
-        uploadBatchRepository.save(batch);
+        uploadBatchRepository.incrementCompletedCount(batch.getId());
         
-        log.info("Upload completed: photoId={}, batchId={}, completedCount={}", 
-            photoId, batch.getId(), batch.getCompletedCount());
+        log.info("Upload completed: photoId={}, batchId={}", photoId, batch.getId());
     }
     
     @Transactional
@@ -162,10 +160,9 @@ public class UploadCommandService {
         photoRepository.save(photo);
         
         UploadBatch batch = photo.getBatch();
-        batch.setFailedCount(batch.getFailedCount() + 1);
-        uploadBatchRepository.save(batch);
+        uploadBatchRepository.incrementFailedCount(batch.getId());
         
-        log.debug("Batch updated: batchId={}, failedCount={}", batch.getId(), batch.getFailedCount());
+        log.debug("Batch updated: batchId={}", batch.getId());
     }
     
     /**
@@ -237,16 +234,10 @@ public class UploadCommandService {
             }
         }
         
-        // Update batch completed count (single update for all successful items)
+        // Update batch completed count atomically (single update for all successful items)
         if (batchId != null && successCount > 0) {
-            UploadBatch batch = uploadBatchRepository.findByIdAndUserId(batchId, userId)
-                .orElse(null);
-            if (batch != null) {
-                batch.setCompletedCount(batch.getCompletedCount() + successCount);
-                uploadBatchRepository.save(batch);
-                log.info("Batch updated: batchId={}, addedCompletedCount={}, newCompletedCount={}", 
-                    batchId, successCount, batch.getCompletedCount());
-            }
+            uploadBatchRepository.incrementCompletedCountBy(batchId, successCount);
+            log.info("Batch updated: batchId={}, addedCompletedCount={}", batchId, successCount);
         }
         
         log.info("Batch complete finished: userId={}, totalItems={}, successCount={}", 
