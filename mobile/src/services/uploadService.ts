@@ -77,8 +77,20 @@ export const uploadService = {
 
   batchComplete: async (items: {photoId: string; fileSizeBytes: number; eTag?: string}[]): Promise<BatchCompleteResponse> => {
     const request: BatchCompleteRequest = { items };
-    const response = await apiClient.post<BatchCompleteResponse>('/api/upload/complete/batch', request);
-    return response.data;
+    console.log('📤 Calling batch complete API:', { itemCount: items.length, photoIds: items.map(i => i.photoId) });
+    try {
+      const response = await apiClient.post<BatchCompleteResponse>('/api/upload/complete/batch', request);
+      console.log('✅ Batch complete API response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Batch complete API error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        photoIds: items.map(i => i.photoId)
+      });
+      throw error;
+    }
   },
 };
 

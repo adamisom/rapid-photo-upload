@@ -478,7 +478,8 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
       const activeUploads = new Set<string>();
       
       // Queue for batched complete notifications
-      const completedQueue: Array<{ photoId: string; fileSize: number }> = [];
+      // Track fileId so we can mark files as completed after backend confirms
+      const completedQueue: Array<{ photoId: string; fileSize: number; fileId: string }> = [];
       const BATCH_COMPLETE_SIZE = 5; // Send batch every 5 completions
       const BATCH_COMPLETE_INTERVAL = 1000; // Or every 1 second
       let batchCompleteTimer: ReturnType<typeof setInterval> | null = null;
@@ -499,9 +500,10 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
             }))
           );
           
-          // Mark files as completed in UI (batch complete confirms they're done)
-          // Note: Files are already marked as completed optimistically after S3 upload
-          // This just confirms the backend knows about them
+          // Mark files as completed ONLY after backend confirms (batch complete API succeeded)
+          batch.forEach(item => {
+            updateFileStatus(item.fileId, 'completed');
+          });
         } catch (err) {
           console.error('Batch complete failed, will retry:', err);
           // Put items back in queue for retry
@@ -510,9 +512,9 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
       };
       
       // Set up periodic flush
-      batchCompleteTimer = setInterval(() => {
+      batchCompleteTimer = setInterval(async () => {
         if (completedQueue.length > 0 && Date.now() - lastBatchCompleteTime >= BATCH_COMPLETE_INTERVAL) {
-          flushCompletedQueue();
+          await flushCompletedQueue();
         }
       }, BATCH_COMPLETE_INTERVAL);
 
@@ -591,13 +593,15 @@ export const useUpload = (maxConcurrent: number = 20): UploadManager => {
             );
 
             // Queue for batched complete notification
+            // Don't mark as completed yet - wait for backend confirmation
             completedQueue.push({
               photoId: urlData.photoId,
-              fileSize: file.file.size
+              fileSize: file.file.size,
+              fileId: file.id // Track which file this is for
             });
             
-            // Mark as completed optimistically (S3 upload succeeded)
-            updateFileStatus(file.id, 'completed');
+            // Mark as "uploading" still (S3 done, but waiting for backend confirmation)
+            // Status will be updated to "completed" after batch complete API succeeds
             
             // Flush if batch size reached
             if (completedQueue.length >= BATCH_COMPLETE_SIZE) {

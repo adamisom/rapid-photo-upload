@@ -304,7 +304,8 @@ export const useUpload = (maxConcurrent: number = 20) => {
       const activeUploads = new Set<string>();
       
       // Queue for batched complete notifications
-      const completedQueue: { photoId: string; fileSize: number }[] = [];
+      // Track fileId so we can mark files as completed after backend confirms
+      const completedQueue: { photoId: string; fileSize: number; fileId: string }[] = [];
       const BATCH_COMPLETE_SIZE = 5; // Send batch every 5 completions
       const BATCH_COMPLETE_INTERVAL = 1000; // Or every 1 second
       let batchCompleteTimer: ReturnType<typeof setInterval> | null = null;
@@ -317,24 +318,31 @@ export const useUpload = (maxConcurrent: number = 20) => {
         const batch = completedQueue.splice(0, BATCH_COMPLETE_SIZE);
         lastBatchCompleteTime = Date.now();
         
+        console.log(`📤 Sending batch complete notification for ${batch.length} photos`);
         try {
-          await uploadService.batchComplete(
+          const result = await uploadService.batchComplete(
             batch.map(item => ({
               photoId: item.photoId,
               fileSizeBytes: item.fileSize
             }))
           );
+          console.log(`✅ Batch complete succeeded:`, result);
+          
+          // Mark files as completed ONLY after backend confirms (batch complete API succeeded)
+          batch.forEach(item => {
+            updateFileStatus(item.fileId, 'completed');
+          });
         } catch (err) {
-          console.error('Batch complete failed, will retry:', err);
+          console.error('❌ Batch complete failed, will retry:', err);
           // Put items back in queue for retry
           completedQueue.unshift(...batch);
         }
       };
       
       // Set up periodic flush
-      batchCompleteTimer = setInterval(() => {
+      batchCompleteTimer = setInterval(async () => {
         if (completedQueue.length > 0 && Date.now() - lastBatchCompleteTime >= BATCH_COMPLETE_INTERVAL) {
-          flushCompletedQueue();
+          await flushCompletedQueue();
         }
       }, BATCH_COMPLETE_INTERVAL);
 
@@ -417,16 +425,19 @@ export const useUpload = (maxConcurrent: number = 20) => {
             );
 
             // Queue for batched complete notification
+            // Don't mark as completed yet - wait for backend confirmation
+            console.log(`✅ S3 upload succeeded for ${file.file.name}, queueing complete notification (photoId: ${urlData.photoId}, size: ${file.file.size})`);
             completedQueue.push({
               photoId: urlData.photoId,
-              fileSize: file.file.size
+              fileSize: file.file.size,
+              fileId: file.id // Track which file this is for
             });
             
-            // Mark as completed optimistically (S3 upload succeeded)
-            updateFileStatus(file.id, 'completed');
+            // Keep status as "uploading" - will be marked as "completed" after batch complete API succeeds
             
             // Flush if batch size reached
             if (completedQueue.length >= BATCH_COMPLETE_SIZE) {
+              console.log(`📤 Batch size reached (${completedQueue.length}), flushing complete notifications`);
               await flushCompletedQueue();
             }
             
@@ -454,7 +465,9 @@ export const useUpload = (maxConcurrent: number = 20) => {
         clearInterval(batchCompleteTimer);
         batchCompleteTimer = null;
       }
+      console.log(`📤 Final flush: ${completedQueue.length} photos remaining in queue`);
       await flushCompletedQueue();
+      console.log(`✅ Upload process complete. Remaining in queue: ${completedQueue.length}`);
       
       // Calculate total upload time using actual start time
       const totalUploadTimeMs = actualUploadStartTime ? Date.now() - actualUploadStartTime : 0;

@@ -43,13 +43,18 @@ export default function GalleryScreen() {
       .slice(0, 5); // Show max 5 suggestions
   };
 
-  const loadPhotos = useCallback(async () => {
+  const loadPhotos = useCallback(async (pageToLoad?: number) => {
+    const targetPage = pageToLoad !== undefined ? pageToLoad : page;
     setLoading(true);
     setError(null);
     try {
-      const response: PhotoListResponse = await photoService.getPhotos(page, pageSize);
+      const response: PhotoListResponse = await photoService.getPhotos(targetPage, pageSize);
       setPhotos(response.photos);
       setTotalPhotos(response.totalCount);
+      // Update page state if we loaded a specific page
+      if (pageToLoad !== undefined) {
+        setPage(pageToLoad);
+      }
     } catch (err) {
       console.error('Failed to load photos:', err);
       const message = err instanceof Error ? err.message : 'Failed to load photos';
@@ -57,12 +62,39 @@ export default function GalleryScreen() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, pageSize]);
 
   useFocusEffect(
     useCallback(() => {
-      void loadPhotos();
-    }, [loadPhotos])
+      // Reset to page 0 and reload when screen is focused to show newly uploaded photos
+      let isCancelled = false;
+      const loadPage0 = async () => {
+        setPage(0);
+        setLoading(true);
+        setError(null);
+        try {
+          const response: PhotoListResponse = await photoService.getPhotos(0, pageSize);
+          if (!isCancelled) {
+            setPhotos(response.photos);
+            setTotalPhotos(response.totalCount);
+          }
+        } catch (err) {
+          if (!isCancelled) {
+            console.error('Failed to load photos:', err);
+            const message = err instanceof Error ? err.message : 'Failed to load photos';
+            setError(message);
+          }
+        } finally {
+          if (!isCancelled) {
+            setLoading(false);
+          }
+        }
+      };
+      void loadPage0();
+      return () => {
+        isCancelled = true;
+      };
+    }, [pageSize])
   );
 
   const handleRefresh = useCallback(async () => {
